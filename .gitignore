@@ -21,3 +21,11 @@ __pycache__/
 
 # secrets — never commit
 .env
+
+# TeX build artifacts
+Draft/*.aux
+Draft/*.bbl
+Draft/*.blg
+Draft/*.log
+Draft/*.out
+Draft/paper.pdf
