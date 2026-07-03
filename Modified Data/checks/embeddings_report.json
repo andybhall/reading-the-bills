@@ -1,0 +1,14 @@
+{
+  "version": "v3 (rollcall-level: question + vote_desc + pre-vote bill text)",
+  "model": "Qwen/Qwen3-Embedding-0.6B",
+  "max_chars": 6000,
+  "dim": 1024,
+  "rollcalls": 23134,
+  "source_counts": {
+    "summary": 17277,
+    "desc_only": 3597,
+    "title": 2260
+  },
+  "empty_text_share": 0.0,
+  "summary_share_legislation": 0.8843
+}

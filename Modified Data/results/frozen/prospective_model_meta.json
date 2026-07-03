@@ -1,0 +1,11 @@
+{
+  "frozen_utc": "2026-06-12T03:25:30.550128+00:00",
+  "data_snapshot_max_vote_date": "2026-06-09",
+  "architecture": "emb2_mlp_mq_16d_tcal (k=16, MLP head, mq offset, temporal calibration), MiniLM v2 rollcall-level text",
+  "n_train_votes": 7016944,
+  "pickle_sha256": "5528f96662b9d7c72df4bddc09ccedf19a3ada9eb0bc74dcd9e0063153d85048",
+  "git_rev": "none",
+  "epochs_run": 10,
+  "internal_dev_log_loss": 0.3587,
+  "temperature": 1.3513
+}

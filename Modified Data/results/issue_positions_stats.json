@@ -1,0 +1,30 @@
+{
+  "rows": 14870,
+  "topics_fit": 23,
+  "mean_abs_corr_topic_vs_overall": 0.9709,
+  "corr_by_topic": {
+    "House|Armed Forces and National Security": 0.974,
+    "House|Congress": 0.952,
+    "House|Crime and Law Enforcement": 0.959,
+    "House|Economics and Public Finance": 0.99,
+    "House|Energy": 0.962,
+    "House|Finance and Financial Sector": 0.972,
+    "House|Government Operations and Politics": 0.974,
+    "House|Health": 0.969,
+    "House|International Affairs": 0.969,
+    "House|Public Lands and Natural Resources": 0.975,
+    "House|Taxation": 0.967,
+    "House|Transportation and Public Works": 0.973,
+    "Senate|Armed Forces and National Security": 0.963,
+    "Senate|Congress": 0.968,
+    "Senate|Crime and Law Enforcement": 0.979,
+    "Senate|Economics and Public Finance": 0.991,
+    "Senate|Energy": 0.965,
+    "Senate|Finance and Financial Sector": 0.975,
+    "Senate|Health": 0.978,
+    "Senate|International Affairs": 0.951,
+    "Senate|Nominations": 0.978,
+    "Senate|Taxation": 0.976,
+    "Senate|Transportation and Public Works": 0.975
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "flat": {
+    "model": "party_question_rate",
+    "split": "congressout118",
+    "eval_set": "test",
+    "log_loss": 0.6932134390667254,
+    "accuracy": 0.5712301079626535,
+    "auc": 0.5,
+    "brier": 0.24976035983650055,
+    "apre": -0.2242450392496237,
+    "contested_log_loss": 0.7353589260323963,
+    "contested_accuracy": 0.4983964957051341,
+    "contested_n": 380105,
+    "n": 582331,
+    "fit_seconds": 24.9,
+    "git_rev": "none",
+    "run_utc": "20260612T031930Z"
+  },
+  "lopsided": {
+    "n": 202226,
+    "log_loss": 0.6139965711907536,
+    "accuracy": 0.708128529467032,
+    "brier": 0.21122134188658193,
+    "base_rate": 0.708128529467032,
+    "auc": 0.5
+  },
+  "by_chamber": {
+    "House": {
+      "n": 516591,
+      "log_loss": 0.6949197852928972,
+      "accuracy": 0.5682812902276656,
+      "brier": 0.2505904975281619,
+      "base_rate": 0.5682812902276656,
+      "auc": 0.5
+    },
+    "Senate": {
+      "n": 65740,
+      "log_loss": 0.6798048126091003,
+      "accuracy": 0.5944021904472163,
+      "brier": 0.2432370610796847,
+      "base_rate": 0.5944021904472163,
+      "auc": 0.5
+    }
+  }
+}

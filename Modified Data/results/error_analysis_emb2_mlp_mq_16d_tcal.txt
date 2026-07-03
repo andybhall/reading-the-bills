@@ -1,0 +1,64 @@
+{
+  "model": "emb2_mlp_mq_16d_tcal",
+  "n": 689351,
+  "overall": {
+    "n": 689351,
+    "log_loss": 0.349,
+    "accuracy": 0.8522,
+    "brier": 0.1075,
+    "base_rate": 0.7086,
+    "auc": 0.9057
+  }
+}
+
+## by qbucket
+   qbucket      n  log_loss  accuracy  share_of_total_loss
+ amendment 114184    0.6139    0.6819               0.2914
+conference  10989    0.4494    0.8155               0.0205
+   cloture  20857    0.3628    0.8438               0.0315
+   passage 267925    0.3308    0.8727               0.3684
+nomination  15312    0.3226    0.8519               0.0205
+procedural 117873    0.2671    0.8981               0.1309
+     other  68813    0.2669    0.8909               0.0764
+resolution  73016    0.1966    0.9414               0.0597
+
+## by text_source
+text_source      n  log_loss  accuracy  share_of_total_loss
+  desc_only  44278    0.4190    0.8171               0.0771
+    summary 552219    0.3465    0.8515               0.7954
+      title  92854    0.3302    0.8729               0.1275
+
+## by len_bin
+   len_bin      n  log_loss  accuracy  share_of_total_loss
+      long 151075    0.5181    0.7444               0.3254
+no_summary  51956    0.4220    0.8189               0.0911
+    medium 181200    0.3506    0.8557               0.2641
+     short 305120    0.2518    0.9091               0.3194
+
+## by bill_category
+bill_category      n  log_loss  accuracy  share_of_total_loss
+         none  13505    0.5444    0.7705               0.0306
+  legislation 645073    0.3442    0.8546               0.9229
+   nomination  29055    0.3418    0.8506               0.0413
+
+## by closeness
+closeness      n  log_loss  accuracy  share_of_total_loss
+ middling 128243    0.5026    0.7817               0.2679
+contested 353320    0.3775    0.8401               0.5545
+ lopsided 207788    0.2056    0.9162               0.1776
+
+## by chamber
+chamber      n  log_loss  accuracy  share_of_total_loss
+ Senate  76972    0.4873    0.7554               0.1559
+  House 612379    0.3316    0.8644               0.8441
+
+## by party_code
+ party_code      n  log_loss  accuracy  share_of_total_loss
+      200.0 346838    0.3563    0.8447               0.5137
+      100.0 340843    0.3406    0.8603               0.4825
+
+## by tenure
+  tenure      n  log_loss  accuracy  share_of_total_loss
+  senior 422350    0.3569    0.8473               0.6265
+freshman 107096    0.3454    0.8557               0.1538
+  junior 159905    0.3305    0.8626               0.2197

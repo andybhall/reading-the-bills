@@ -1,0 +1,21 @@
+{
+  "parsed": 7461,
+  "failed": 0,
+  "failed_files": [],
+  "with_title": 7461,
+  "with_policy_area": 7456,
+  "with_sponsor": 7457,
+  "with_any_summary": 7379,
+  "policy_area_top10": {
+    "Congress": 1613,
+    "International Affairs": 705,
+    "Armed Forces and National Security": 492,
+    "Government Operations and Politics": 463,
+    "Commemorations": 428,
+    "Economics and Public Finance": 348,
+    "Health": 324,
+    "Public Lands and Natural Resources": 321,
+    "Crime and Law Enforcement": 303,
+    "Finance and Financial Sector": 284
+  }
+}

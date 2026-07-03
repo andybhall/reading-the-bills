@@ -1,0 +1,17 @@
+{
+  "snapshot": "2026-06-09",
+  "rollcalls_scored": 43,
+  "votes_scored": 9451,
+  "date_range": [
+    "2026-06-10",
+    "2026-06-30"
+  ],
+  "metrics": {
+    "n": 9451,
+    "log_loss": 0.3315,
+    "accuracy": 0.8675,
+    "brier": 0.104,
+    "base_rate": 0.6765,
+    "auc": 0.9207
+  }
+}

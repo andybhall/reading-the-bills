@@ -1,0 +1,11 @@
+{
+  "design": "train 108-116, val 117, test 118; 119 reserved for prospective",
+  "counts": {
+    "train": 5602002,
+    "test": 582331,
+    "val": 511719
+  },
+  "test_members_unseen_in_train": 161,
+  "test_members_total": 554,
+  "content_sha256": "2c24e81fb9cf4306b12d384615f0d63b74cd0828eaaaeedcebd59c87da22b85e"
+}

@@ -1,0 +1,22 @@
+{
+  "seed": 42,
+  "n": 7016944,
+  "shares": {
+    "train": 0.8003,
+    "val": 0.1,
+    "test": 0.0997
+  },
+  "counts": {
+    "train": 5615341,
+    "val": 702035,
+    "test": 699568
+  },
+  "rollcalls_per_split": {
+    "train": 18507,
+    "val": 2321,
+    "test": 2306
+  },
+  "worst_group_train_share": 0.7783613445378151,
+  "members_unseen_in_train": 2,
+  "content_sha256": "e472c90cc423fa3dc65340adfd12f2614f9730b1c68b21a05b44a8773d6df019"
+}

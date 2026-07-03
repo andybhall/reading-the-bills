@@ -1,0 +1,30 @@
+{
+  "n": 7016944,
+  "shares": {
+    "train": 0.8024,
+    "val": 0.0993,
+    "test": 0.0982
+  },
+  "counts": {
+    "train": 5630716,
+    "val": 696877,
+    "test": 689351
+  },
+  "rollcalls_per_split": {
+    "train": 18511,
+    "test": 2313,
+    "val": 2310
+  },
+  "val_test_date_ranges": {
+    "val": [
+      "2004-05-05",
+      "2026-05-13"
+    ],
+    "test": [
+      "2004-06-24",
+      "2026-06-09"
+    ]
+  },
+  "members_unseen_in_train": 62,
+  "content_sha256": "8f3acacbf7ab0ca09b2842ae82271eaca61de4e891690439cf9c03cfe14125f5"
+}

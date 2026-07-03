@@ -1,0 +1,13 @@
+{
+  "frozen_utc": "2026-07-03T22:58:37.217202+00:00",
+  "data_snapshot_max_vote_date": "2026-06-09",
+  "architecture": "blend3_mlp_tfidf_emb3_tcal",
+  "n_train_votes": 7016944,
+  "pickle_sha256": "37f6fe2a16fa2b80f9618eb5e5c07f69eb5f0c8dfe965753bf213e67de18cdb8",
+  "git_rev": "none",
+  "blend_weights": [
+    0.5687944889068604,
+    0.12131496518850327,
+    0.4160880446434021
+  ]
+}

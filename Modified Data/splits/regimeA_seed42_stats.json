@@ -1,0 +1,19 @@
+{
+  "seed": 42,
+  "n": 10602001,
+  "shares": {
+    "train": 0.8002,
+    "val": 0.1,
+    "test": 0.0998
+  },
+  "counts": {
+    "train": 8483750,
+    "val": 1059875,
+    "test": 1058376
+  },
+  "rollcalls_total": 35442,
+  "rollcalls_no_train_votes": 0,
+  "member_congresses_total": 10410,
+  "member_congresses_no_train_votes": 1,
+  "content_sha256": "b9ee22e4daac3d556bab758b57547d6530b0d21c87fb02d39c62a0583385b2f0"
+}

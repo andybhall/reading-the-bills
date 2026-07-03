@@ -1,0 +1,8 @@
+{
+  "member_congress_rows": 10369,
+  "rows_n_unity_ge_100": 10207,
+  "mean_actual_with_party": 0.9126,
+  "mean_expected_with_party": 0.9129,
+  "residual_sd": 0.0315,
+  "corr_residual_extremity_within_party": -0.1625
+}

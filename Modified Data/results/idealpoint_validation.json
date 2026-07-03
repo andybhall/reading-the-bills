@@ -1,0 +1,161 @@
+{
+  "House": {
+    "n_members": 1757,
+    "n_with_nominate": 1744,
+    "corr_dim1_nominate": 0.9792,
+    "spearman_dim1_nominate": 0.9815,
+    "share_abs_gt_5": 0.0166,
+    "corr_within_dem": 0.8873,
+    "n_dem": 846,
+    "corr_within_rep": 0.9065,
+    "n_rep": 895
+  },
+  "Senate": {
+    "n_members": 333,
+    "n_with_nominate": 332,
+    "corr_dim1_nominate": 0.9778,
+    "spearman_dim1_nominate": 0.9741,
+    "share_abs_gt_5": 0.003,
+    "corr_within_dem": 0.8965,
+    "n_dem": 158,
+    "corr_within_rep": 0.8418,
+    "n_rep": 169
+  },
+  "top_disagreements": [
+    {
+      "bioname": "FLAKE, Jeff",
+      "chamber": "Senate",
+      "party_code": 200.0,
+      "last_congress": 115,
+      "nominate_dim1": 0.855,
+      "dim1": 1.7269999980926514,
+      "gap": 1.276
+    },
+    {
+      "bioname": "STOCKMAN, Steve",
+      "chamber": "House",
+      "party_code": 200.0,
+      "last_congress": 113,
+      "nominate_dim1": 0.899,
+      "dim1": 1.9160000085830688,
+      "gap": 1.266
+    },
+    {
+      "bioname": "PAUL, Ronald Ernest",
+      "chamber": "House",
+      "party_code": 200.0,
+      "last_congress": 112,
+      "nominate_dim1": 0.863,
+      "dim1": 1.7610000371932983,
+      "gap": 1.24
+    },
+    {
+      "bioname": "PAUL, Rand",
+      "chamber": "Senate",
+      "party_code": 200.0,
+      "last_congress": 119,
+      "nominate_dim1": 0.878,
+      "dim1": 2.1600000858306885,
+      "gap": 1.166
+    },
+    {
+      "bioname": "DEXTER, Maxine",
+      "chamber": "House",
+      "party_code": 100.0,
+      "last_congress": 119,
+      "nominate_dim1": -0.458,
+      "dim1": -5.9770002365112305,
+      "gap": 1.075
+    },
+    {
+      "bioname": "CASAR, Greg",
+      "chamber": "House",
+      "party_code": 100.0,
+      "last_congress": 119,
+      "nominate_dim1": -0.427,
+      "dim1": -5.7179999351501465,
+      "gap": 1.049
+    },
+    {
+      "bioname": "TURNER, Sylvester",
+      "chamber": "House",
+      "party_code": 100.0,
+      "last_congress": 119,
+      "nominate_dim1": -0.746,
+      "dim1": -2.2929999828338623,
+      "gap": 1.035
+    },
+    {
+      "bioname": "COOLEY, Wes",
+      "chamber": "House",
+      "party_code": 200.0,
+      "last_congress": 104,
+      "nominate_dim1": 0.861,
+      "dim1": 2.303999900817871,
+      "gap": 1.025
+    },
+    {
+      "bioname": "LEE, Summer",
+      "chamber": "House",
+      "party_code": 100.0,
+      "last_congress": 119,
+      "nominate_dim1": -0.45,
+      "dim1": -5.6570000648498535,
+      "gap": 0.971
+    },
+    {
+      "bioname": "TOKUDA, Jill",
+      "chamber": "House",
+      "party_code": 100.0,
+      "last_congress": 119,
+      "nominate_dim1": -0.464,
+      "dim1": -5.563000202178955,
+      "gap": 0.901
+    },
+    {
+      "bioname": "LEE, Mike",
+      "chamber": "Senate",
+      "party_code": 200.0,
+      "last_congress": 119,
+      "nominate_dim1": 0.891,
+      "dim1": 3.0429999828338623,
+      "gap": 0.859
+    },
+    {
+      "bioname": "SANFORD, Mark",
+      "chamber": "House",
+      "party_code": 200.0,
+      "last_congress": 115,
+      "nominate_dim1": 0.686,
+      "dim1": 1.7319999933242798,
+      "gap": 0.829
+    },
+    {
+      "bioname": "COBURN, Thomas Allen",
+      "chamber": "House",
+      "party_code": 200.0,
+      "last_congress": 113,
+      "nominate_dim1": 0.782,
+      "dim1": 2.328000068664551,
+      "gap": 0.828
+    },
+    {
+      "bioname": "BALINT, Becca",
+      "chamber": "House",
+      "party_code": 100.0,
+      "last_congress": 119,
+      "nominate_dim1": -0.442,
+      "dim1": -5.2210001945495605,
+      "gap": 0.821
+    },
+    {
+      "bioname": "FLETCHER, Elizabeth",
+      "chamber": "House",
+      "party_code": 100.0,
+      "last_congress": 119,
+      "nominate_dim1": -0.54,
+      "dim1": -1.5820000171661377,
+      "gap": 0.818
+    }
+  ]
+}

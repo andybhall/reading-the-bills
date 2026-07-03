@@ -1,0 +1,17 @@
+{
+  "n_rollcalls": 23134,
+  "by_category": {
+    "legislation": 19537,
+    "nomination": 3059,
+    "none": 502,
+    "treaty": 36
+  },
+  "category_share": {
+    "legislation": 0.8445,
+    "nomination": 0.1322,
+    "none": 0.0217,
+    "treaty": 0.0016
+  },
+  "unparseable_examples": [],
+  "unique_legislation_bills": 7443
+}

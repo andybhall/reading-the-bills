@@ -1,0 +1,13 @@
+{
+  "bills_scanned": 7443,
+  "parse_failures": 0,
+  "cosponsor_rows": 185010,
+  "bills_with_cosponsors": 5134,
+  "party_counts": {
+    "D": 99899,
+    "R": 84825,
+    "I": 256,
+    "ID": 30
+  },
+  "missing_dates": 0
+}

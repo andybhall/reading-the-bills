@@ -1,0 +1,45 @@
+{
+  "flat": {
+    "model": "constant_rate",
+    "split": "forecast108_119",
+    "eval_set": "test",
+    "log_loss": 0.6173753874180397,
+    "accuracy": 0.7085722657978302,
+    "auc": 0.5,
+    "brier": 0.212781830990989,
+    "apre": -0.10585359946275032,
+    "contested_log_loss": NaN,
+    "contested_accuracy": NaN,
+    "contested_n": 0,
+    "n": 689351,
+    "fit_seconds": 0.0,
+    "git_rev": "none",
+    "run_utc": "20260612T000331Z"
+  },
+  "lopsided": {
+    "n": 689351,
+    "log_loss": 0.6173753874180397,
+    "accuracy": 0.7085722657978302,
+    "brier": 0.212781830990989,
+    "base_rate": 0.7085722657978302,
+    "auc": 0.5
+  },
+  "by_chamber": {
+    "House": {
+      "n": 612379,
+      "log_loss": 0.6124277086373727,
+      "accuracy": 0.7179214179454226,
+      "brier": 0.2103641554507563,
+      "base_rate": 0.7179214179454226,
+      "auc": 0.5
+    },
+    "Senate": {
+      "n": 76972,
+      "log_loss": 0.6567384620948856,
+      "accuracy": 0.6341916541079873,
+      "brier": 0.2320165362039513,
+      "base_rate": 0.6341916541079873,
+      "auc": 0.5
+    }
+  }
+}
