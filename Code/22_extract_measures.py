@@ -147,6 +147,8 @@ def main():
     surprises(panel)
     cutpoints(panel, 118, "House")
     cutpoints(panel, 118, "Senate")
+    cutpoints(panel, 119, "House")
+    cutpoints(panel, 119, "Senate")
 
 
 if __name__ == "__main__":

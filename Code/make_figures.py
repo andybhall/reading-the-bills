@@ -95,35 +95,90 @@ def f2_loyalty():
 
 
 # ---------------------------------------------------------------- F3
-def f3_issue_deviations():
+TOPIC_SHORT = {
+    "Economics and Public Finance": "Economics & Public Finance",
+    "Armed Forces and National Security": "Armed Forces & Nat. Security",
+    "International Affairs": "International Affairs",
+    "Government Operations and Politics": "Government Operations",
+    "Crime and Law Enforcement": "Crime & Law Enforcement",
+    "Finance and Financial Sector": "Finance & Financial Sector",
+    "Public Lands and Natural Resources": "Public Lands & Nat. Resources",
+    "Transportation and Public Works": "Transportation & Public Works",
+}
+
+
+def load_issues(min_votes=50):
     iss = pd.read_parquet(RES / "issue_positions.parquet")
-    iss = iss[(iss.topic != "OVERALL") & (iss.n_votes >= 40)].copy()
+    iss = iss[(iss.topic != "OVERALL") & (iss.n_votes >= min_votes)].copy()
+    pos = pd.read_parquet(RES / "member_positions_1d.parquet")
+    iss = iss.merge(pos[["icpsr", "last_congress"]], on="icpsr", how="left")
+    iss["short"] = iss.topic.map(TOPIC_SHORT).fillna(iss.topic)
+    return iss
+
+
+def f3_issue_grid():
+    """Every measured legislator, every major topic: topic position
+    against overall position. Deviations are vertical distances from the
+    45-degree line; the two largest recent-era deviations per panel are
+    labeled."""
+    iss = load_issues()
     topics = (iss.groupby("topic")["icpsr"].count()
-              .sort_values(ascending=False).head(8).index.tolist())
-    d = iss[iss.topic.isin(topics)]
-    # members with the largest absolute single-topic deviation
-    top = (d.groupby(["icpsr", "bioname", "state_abbrev", "party_code"])
-           ["deviation"].apply(lambda s: s.abs().max()).reset_index()
-           .sort_values("deviation", ascending=False).head(18))
-    mat = (d[d.icpsr.isin(top.icpsr)]
-           .pivot_table(index="icpsr", columns="topic", values="deviation"))
-    mat = mat.loc[top.icpsr, topics]
-    labels = [shortname(b, s) for b, s in zip(top.bioname, top.state_abbrev)]
-    fig, ax = plt.subplots(figsize=(7.0, 5.2))
-    lim = np.nanmax(np.abs(mat.to_numpy()))
-    im = ax.imshow(mat.to_numpy(), cmap="RdBu_r", vmin=-lim, vmax=lim,
-                   aspect="auto")
-    ax.set_yticks(range(len(labels)))
-    ax.set_yticklabels(labels, fontsize=8)
-    short_topic = {t: t.replace(" and ", " & ")[:24] for t in topics}
-    ax.set_xticks(range(len(topics)))
-    ax.set_xticklabels([short_topic[t] for t in topics], rotation=35,
-                       ha="right", fontsize=8)
-    cb = fig.colorbar(im, ax=ax, shrink=0.8)
-    cb.set_label("Issue position minus overall position\n"
-                 "(+ = more conservative on this issue)", fontsize=8)
-    ax.set_title("Issue-specific deviations from members' overall positions")
-    save(fig, "issue_deviations.pdf")
+              .sort_values(ascending=False).head(9).index.tolist())
+    fig, axes = plt.subplots(3, 3, figsize=(8.6, 8.6), sharex=True, sharey=True)
+    for ax, t in zip(axes.ravel(), topics):
+        d = iss[iss.topic == t]
+        ax.plot([-3, 3], [-3, 3], color="#bbbbbb", lw=0.7, zorder=0)
+        ax.scatter(d.overall_z, d.z, s=5, alpha=0.35,
+                   c=party_color(d.party_code), linewidths=0)
+        lab = d[d.last_congress >= 114].reindex(
+            d.deviation.abs().sort_values(ascending=False).index)
+        lab = lab[lab.last_congress >= 114].head(2)
+        for r in lab.itertuples():
+            ax.annotate(shortname(r.bioname, r.state_abbrev),
+                        (r.overall_z, r.z), fontsize=6.5,
+                        xytext=(3, -6), textcoords="offset points")
+        rho = np.corrcoef(d.overall_z, d.z)[0, 1]
+        ax.set_title(f"{iss.loc[iss.topic == t, 'short'].iloc[0]}"
+                     f"  ($\\rho$ = {rho:.2f})", fontsize=8.5)
+        ax.set_xlim(-3, 3)
+        ax.set_ylim(-3, 3)
+    for ax in axes[-1]:
+        ax.set_xlabel("Overall position", fontsize=8.5)
+    for ax in axes[:, 0]:
+        ax.set_ylabel("Position on this issue", fontsize=8.5)
+    fig.suptitle("Issue-specific positions of every measured legislator, "
+                 "101st–119th Congresses", fontweight="bold", y=0.995)
+    fig.tight_layout()
+    save(fig, "issue_grid.pdf")
+
+
+def f3b_topic_polarization():
+    """Party positions by topic: medians, interquartile ranges, and the
+    implied party gap, for all thirteen topics."""
+    iss = load_issues()
+    stats = []
+    for t, d in iss.groupby("topic"):
+        dd, rr = d[d.party_code == 100.0].z, d[d.party_code == 200.0].z
+        stats.append((d["short"].iloc[0], dd.median(), rr.median(),
+                      dd.quantile(0.25), dd.quantile(0.75),
+                      rr.quantile(0.25), rr.quantile(0.75)))
+    st = pd.DataFrame(stats, columns=["topic", "dmed", "rmed",
+                                      "d25", "d75", "r25", "r75"])
+    st["gap"] = st.rmed - st.dmed
+    st = st.sort_values("gap")
+    y = np.arange(len(st))
+    fig, ax = plt.subplots(figsize=(6.8, 4.6))
+    ax.hlines(y, st.dmed, st.rmed, color="#cccccc", lw=1.2, zorder=1)
+    ax.hlines(y - 0.14, st.d25, st.d75, color=DEM, lw=3, alpha=0.35)
+    ax.hlines(y + 0.14, st.r25, st.r75, color=REP, lw=3, alpha=0.35)
+    ax.scatter(st.dmed, y - 0.14, color=DEM, s=34, zorder=3, label="Democratic median")
+    ax.scatter(st.rmed, y + 0.14, color=REP, s=34, zorder=3, label="Republican median")
+    ax.set_yticks(y)
+    ax.set_yticklabels(st.topic, fontsize=8.5)
+    ax.set_xlabel("Issue-specific position (bars: interquartile ranges)")
+    ax.set_title("How far apart the parties are, issue by issue")
+    ax.legend(frameon=False, fontsize=8, loc="lower right")
+    save(fig, "topic_polarization.pdf")
 
 
 # ---------------------------------------------------------------- F4
@@ -256,7 +311,8 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     f1_validation()
     f2_loyalty()
-    f3_issue_deviations()
+    f3_issue_grid()
+    f3b_topic_polarization()
     f5_surprises() if (MEAS / "surprises.parquet").exists() else print("skip F5 (no measures yet)")
     f4_cutpoints() if (MEAS / "cutpoints_house118.parquet").exists() else print("skip F4 (no measures yet)")
     f6_calibration()

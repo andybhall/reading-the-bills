@@ -117,7 +117,7 @@ Peterson, Kyrsten Sinema---from votes alone
 without any text about the members, the libertarian non-interventionist
 bloc (dovish on defense, civil-libertarian on crime, otherwise very
 conservative) and the hawkish wing of the Democratic party
-(Figure~\ref{fig:issues}). At the bill level, every rollcall acquires a
+(Figure~\ref{fig:issuegrid}). At the bill level, every rollcall acquires a
 \emph{cutpoint}---the location on the ideological scale where a member
 becomes indifferent---and the distribution of cutpoints against the
 distribution of members maps the strategic structure of the agenda:
@@ -338,29 +338,69 @@ Democrats; red: Republicans.}
 
 \subsection{Issue-specific positions}
 
-Fitting the spatial model within policy areas yields per-topic
-positions, and their deviations from each member's overall position
-measure issue-specific ideology---the structure a single dimension
-throws away. Figure~\ref{fig:issues} maps the largest deviations of
-the modern era. The recovered patterns match qualitative knowledge
-that never entered the model: the libertarian bloc (Ron and Rand Paul,
-Amash-adjacent members such as Brat, Roy, and Good) is sharply
-\emph{less} conservative than its overall position on defense and on
-crime---non-interventionism and civil libertarianism measured from
-votes alone---while a set of moderate Democrats deviates hawkishly on
-armed forces and border-adjacent areas. These per-topic positions are
-validated instruments (they pass party-stereotype sanity checks
-documented in the repository); a companion paper develops them at full
-depth, including their movement over time.
+Because every rollcall carries a policy area from its bill's text
+metadata, the spatial model can be re-estimated \emph{within} policy
+areas, giving each member a position on economics, defense, crime,
+health, and ten other domains---the structure a single dimension is
+forced to average away. Coverage is essentially complete: between
+roughly 800 and 1,400 members receive a position in every major area
+(fifty-vote minimum per member-area), and Table~\ref{tab:topics}
+reports the full per-topic accounting.
+
+Three systematic facts emerge. First, one dimension is \emph{almost}
+sufficient---within-area positions correlate with overall positions at
+$\rho = .95$--$.99$ (Figure~\ref{fig:issuegrid})---which is precisely
+why the deviations that remain are informative rather than noise: they
+are the structured residue that survives a near-perfect one-dimensional
+fit. Second, polarization is not uniform across the agenda
+(Figure~\ref{fig:topicpolar}). The parties stand farthest apart on
+energy and taxation---the modern economic core---and closest together
+on armed forces and international affairs, which are also the areas
+with the \emph{widest within-party spreads}: foreign policy is
+simultaneously the least partisan and the most internally contested
+terrain in Congress, in both parties. Third, the deviations recover
+known ideological factions from votes alone, systematically rather
+than anecdotally. Reading down Table~\ref{tab:topics}'s largest
+recent-era deviators: the liberal-direction outliers on armed forces
+and international affairs are the libertarian Republicans (Paul,
+Crane, Roy, Sanford), civil-libertarian deviations appear on crime
+(Brat, Burlison), and hawkish or border-district Democrats deviate
+conservatively in the same areas. None of these members' texts,
+speeches, or biographies entered the estimation; their votes alone
+locate them.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=.9\linewidth]{figures/issue_deviations.pdf}
-\caption{Issue-specific deviations from overall positions, members with
-the largest deviations (rows) by policy area (columns). Red: more
-conservative on this issue than the member's overall record; blue: less.}
-\label{fig:issues}
+\includegraphics[width=.98\linewidth]{figures/issue_grid.pdf}
+\caption{Issue-specific positions for every measured legislator
+(fifty-vote minimum per member-area), 101st--119th Congresses. Each
+panel plots members' positions estimated only from votes in that policy
+area against their overall positions; the diagonal is exact
+one-dimensionality, and vertical distance from it is the member's
+issue-specific deviation. The two largest recent-era deviations are
+labeled in each panel. Blue: Democrats; red: Republicans.}
+\label{fig:issuegrid}
 \end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.85\linewidth]{figures/topic_polarization.pdf}
+\caption{Party medians and interquartile ranges of issue-specific
+positions, by policy area, ordered by the party gap. Energy and
+taxation divide the parties most; armed forces and international
+affairs divide them least---and divide each party internally most.}
+\label{fig:topicpolar}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{The issue-position measure, area by area: members measured,
+party gap (Republican minus Democratic median), within-party standard
+deviations, correlation with the overall dimension, and the largest
+recent-era (114th Congress onward) deviations in each direction.}
+\label{tab:topics}
+{\small \input{tables/issue_topics.tex}}
+\end{table}
 
 \subsection{Out-of-character votes}
 
@@ -418,6 +458,20 @@ amendments, Section~\ref{sec:limits} shows the opposite, and the
 contrast is itself the measurement: language predicts coalitions where
 coalitions form on content, and the places it fails are the places
 procedure and bargaining, not content, do the organizing.
+
+Because the map from text to conflict structure is an estimated object,
+it can be queried with bills that do not exist. We release, alongside
+the paper, an interactive forecaster: paste the text of a hypothetical
+bill, name a sponsoring party and chamber, and the frozen model returns
+a predicted cutpoint, party-by-party support, and each current member's
+vote probability (Appendix~\ref{app:dashboard}). The tool exposes the
+instrument's boundaries as deliberately as its capabilities: because
+floor agendas are curated by the majority party, the model has never
+observed votes on off-agenda bills, and the dashboard flags forecasts
+whose internal structure reveals extrapolation---for instance, when the
+predicted coalition contradicts the bill's own sponsorship. The
+dashboard is thus both a research tool and a live demonstration of the
+agenda-selection boundary discussed above.
 
 \section{Measuring the Limits---and What They Say About Congress}
 \label{sec:limits}
@@ -531,6 +585,27 @@ regime.}
 \label{tab:ablation}
 \input{tables/ablation.tex}
 \end{table}
+
+\section{The Interactive Forecaster}
+\label{app:dashboard}
+
+The dashboard wraps the frozen champion's MiniLM component tower (the
+blend's TF--IDF component requires corpus-level context a single pasted
+bill lacks; the MiniLM tower alone carries the largest blend weight).
+Pasted text is assembled into the training text template and embedded
+with the training encoder; a synthetic bill record carries the
+user-specified sponsoring party through the same features used in
+training; member vote probabilities are computed for the full current
+roster; and the displayed cutpoint is the position at which predicted
+support crosses one half, from a logistic fit of predicted votes on the
+current congress's estimated positions---mirroring the paper's
+cutpoint estimation on realized votes. Sanity behavior: a commemorative
+post-office naming yields near-unanimous predicted support and no
+identified cutpoint; a sponsor-aligned tax bill yields a party-line
+forecast with a center-left cutpoint. Off-agenda hypotheticals trigger
+the extrapolation flag described in the text. The service is a single
+CPU process suitable for a small container host; deployment
+configuration accompanies the repository.
 
 \section{The Experiment Ledger}
 \label{app:ledger}

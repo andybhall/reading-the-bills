@@ -190,6 +190,40 @@ def error_decomp():
             rows_out, "lrccc")
 
 
+def issue_topics():
+    """Systematic per-topic summary: coverage, party gap, within-party
+    dispersion, correlation with the overall dimension, and the largest
+    recent-era deviators in each direction."""
+    iss = pd.read_parquet(RES / "issue_positions.parquet")
+    iss = iss[(iss.topic != "OVERALL") & (iss.n_votes >= 50)].copy()
+    pos = pd.read_parquet(RES / "member_positions_1d.parquet")
+    iss = iss.merge(pos[["icpsr", "last_congress"]], on="icpsr", how="left")
+
+    def nm(r):
+        last = str(r.bioname).split(",")[0].title()
+        return f"{last} ({r.state_abbrev})"
+
+    rows = []
+    order = (iss.groupby("topic")["icpsr"].count()
+             .sort_values(ascending=False).index)
+    for t in order:
+        d = iss[iss.topic == t]
+        dd, rr = d[d.party_code == 100.0], d[d.party_code == 200.0]
+        gap = rr.z.median() - dd.z.median()
+        rho = np.corrcoef(d.overall_z, d.z)[0, 1]
+        rec = d[d.last_congress >= 114].sort_values("deviation")
+        lib = nm(rec.iloc[0]) if len(rec) else "---"
+        con = nm(rec.iloc[-1]) if len(rec) else "---"
+        rows.append(" & ".join([
+            t.replace(" and ", " \\& "), f"{len(d):,}", fmt(gap, 2),
+            fmt(dd.z.std(), 2), fmt(rr.z.std(), 2), fmt(rho, 2),
+            lib, con]))
+    tabular(OUT / "issue_topics.tex",
+            "Policy area & $N$ & Party gap & SD (D) & SD (R) & "
+            "$\\rho$(overall) & Largest liberal dev. & Largest conservative dev.",
+            rows, "lrccccll")
+
+
 def prospective():
     rows = []
     for tag, f in (("v1 (emb2-MLP tower)", "prospective_report.json"),
@@ -265,6 +299,7 @@ def main():
     litrace(lb)
     ablation(lb)
     error_decomp()
+    issue_topics()
     prospective()
     numbers(lb)
     # completeness check: no placeholder cells in any table the draft inputs
