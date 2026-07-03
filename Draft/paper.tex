@@ -2,20 +2,21 @@
 \usepackage[margin=1.1in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs,multirow}
+\usepackage{graphicx}
 \usepackage{natbib}
 \usepackage{setspace}
 \usepackage[hidelinks]{hyperref}
 \usepackage{caption}
 \input{tables/numbers.tex}
 
-\title{Forecasting Congressional Votes in the AI Era:\\
-An Open Benchmark and an Audit of What Prediction Really Shows}
+\title{Measuring Congress in the AI Era:\\
+What Modern Vote Prediction Reveals About\\ Members, Bills, and Institutions}
 \author{Andrew B.\ Hall\thanks{Stanford University. Replication materials,
-including the full pipeline, model registry, experiment ledger, and
-session logs of the AI-assisted development process, are available in the
-project repository. All statistics in this paper are generated
-programmatically from the analysis code's output files; no number is
-transcribed by hand.}}
+including the full pipeline, model registry, pre-registered experiment
+ledger, and session logs of the AI-assisted development process, are
+available in the project repository. Every statistic and figure in this
+paper is generated programmatically from the analysis code's output
+files; no number is transcribed by hand.}}
 \date{Draft: July 2026 --- preliminary, comments welcome}
 
 \begin{document}
@@ -23,470 +24,532 @@ transcribed by hand.}}
 \onehalfspacing
 
 \begin{abstract}
-\noindent A decade ago, a research program at the intersection of machine
-learning and legislative studies asked whether the text of a bill could
-predict how members of Congress would vote on it
-\citep{gerrish2011predicting, gerrish2012they, kraft2016embedding}. We
-revisit that program with modern tools and, just as importantly, with
-modern evaluation discipline. Using an open benchmark built on 10.6
-million individual voting decisions (101st--119th Congresses), we compare
-the 2011--2016 architectures to a contemporary stack---sentence-embedding
-representations of rollcall-level text, deep parameter heads, member
-history offsets, and post-hoc calibration---under four evaluation regimes
-of increasing difficulty: random vote completion, random rollcall
-holdout, within-congress temporal forecasting, and whole-congress-out
-transfer, plus a cryptographically frozen prospective test on votes that
-had not occurred when the model was finalized. Three findings emerge.
-First, the modern stack forecasts far better than anything prior: test
-log loss of \champForecastLL{} versus \gbTcalForecastLL{} for a
-calibrated Gerrish--Blei-style model, with \champForecastAcc\% accuracy
-and \champContestedAcc\% on contested votes. Second, the earlier
-literature's apparent success depended on evaluation choices: under
-proper scoring rules and honest splits, no 2011--2016 architecture beats
-a two-way count table of member voting rates, and the uncalibrated
-classical model is worse than predicting the base rate. Third, the hard
-limits are structural, not representational: amendment votes resist
-text-based improvement because coalitions form around deals rather than
-content, and no model we test carries member behavior across a change in
-chamber majority. We release the benchmark, all code, and a
-pre-registered experiment ledger documenting negative results alongside
-positive ones.
+\noindent Nearly everything political science measures about members of
+Congress---ideology, loyalty, issue positions---is extracted from models
+that predict rollcall votes. Prediction quality therefore bounds
+measurement quality: a model that forecasts votes better has, by
+construction, captured more of the behavioral structure there is to
+measure. We build the strongest vote predictor to date---an ensemble
+reading rollcall-level text with modern language-model encoders,
+anchored on member histories, with calibrated probabilities
+(\champForecastAcc\% accuracy on strictly future votes;
+\champContestedAcc\% on contested votes; verified prospectively on
+\prospectiveN{} votes cast \emph{after} the model was cryptographically
+frozen)---and then use it as a measurement instrument. The model's
+internals recover and extend the classical measurement canon: positions
+correlating at $r=.98$ with DW-NOMINATE, party-loyalty residuals that
+identify the chamber's mavericks by name, issue-specific positions that
+recover libertarian non-interventionism from votes alone, bill-level
+cutpoints locating each rollcall on the ideological scale, and a new
+measure of \emph{out-of-character votes}. Just as informative is what
+the instrument cannot do. Amendment coalitions resist text-based
+prediction because they form around deals rather than content---a
+measurable boundary on what legislative language reveals. And no model
+survives a change in majority control: member histories actively
+mislead across the 2022 House flip, showing that much of what vote
+models measure is institutional \emph{role}, not stable preference.
+Career-spanning NOMINATE scores, by contrast, nearly match the deep
+model's cross-congress accuracy---a genuine vindication of traditional
+measurement design. We release the benchmark, models, and a
+pre-registered ledger of all results, positive and negative.
 \end{abstract}
 
 \section{Introduction}
 
-How predictable is a member of Congress? The question is old, but it has
-acquired new stakes. Measures of legislator behavior---ideal points,
-loyalty scores, issue positions---anchor an enormous empirical
-literature, and nearly all of them are byproducts of a prediction
-problem: a model is fit to rollcall votes, and its parameters are read as
-measurements of the members who cast them \citep{poole1997congress,
-clinton2004statistical}. The better a model predicts, the more behavioral
-structure it has captured, and the more there is to measure. Prediction
-quality is thus not an engineering vanity metric; it is an upper bound on
-what vote-based measurement can know.
+The empirical study of Congress rests on measurement, and the
+measurement rests on prediction. An ideal point is the parameter of a
+model built to predict votes \citep{poole1997congress,
+clinton2004statistical}; a party-unity score is a prediction from party
+membership; an interest-group rating is a prediction from a hand-picked
+vote subset. The field's measures of legislators are, almost without
+exception, the interpretable residue of vote-prediction machinery. This
+has a bracing implication that the measurement literature rarely states:
+\emph{how well the machinery predicts is an upper bound on how much the
+measures can know.} Structure a model fails to predict is structure no
+measure derived from it can contain.
 
-Between 2011 and 2016, a series of papers imported the tools of that
-era's machine learning---topic models and early word
-embeddings---to push prediction beyond the spatial model, asking whether
-a bill's \emph{text} could forecast votes on legislation the model had
-never seen \citep{gerrish2011predicting, gerrish2012they,
-kraft2016embedding, lauderdale2014scaling}. The program then largely went
-quiet, well before the tools that would seem most suited to it existed.
-Modern language models read legislative text incomparably better than
-LDA. What would the program find today?
+For four decades the machinery in question has been the spatial voting
+model, and it earned its dominance: one or two dimensions classify
+around ninety percent of votes in the modern Congress. A brief
+literature at the intersection of machine learning and legislative
+studies tried to push further by reading the bills themselves
+\citep{gerrish2011predicting, gerrish2012they, kraft2016embedding,
+lauderdale2014scaling}, but it worked with the text tools of its
+era---topic models, early embeddings---and went quiet before modern
+language models existed. Today's encoders read legislative text
+incomparably better. If prediction bounds measurement, then better
+predictors should mean richer, sharper, more trustworthy measures of
+Congress. Do they? What new things can we now measure? And where does
+even the best modern predictor hit a wall---and what do the walls
+themselves teach us about the institution?
 
-This paper answers that question, but with an amendment to the question
-itself. The 2011--2016 literature evaluated prediction almost exclusively
-on randomly held-out votes, reported accuracy rather than probabilistic
-scores, and never tested calibration. We show that these choices were not
-innocuous: they flattered the methods of that era and obscured both how
-little bill text then contributed and how badly the resulting
-probabilities were miscalibrated. Any modern revival has to fix the
-yardstick before racing on it. We therefore make the evaluation regime a
-first-class object of study. Our benchmark scores every model, classical
-and modern, under four regimes of increasing difficulty---random vote
-completion, random rollcall holdout, within-congress temporal
-forecasting, and whole-congress-out transfer---using proper scoring rules
-throughout, and adds a fifth test that no amount of researcher iteration
-can contaminate: a frozen, hash-pinned model scored only on votes that
-occurred after it was finalized.
+This paper answers in three movements. \emph{First, we build and
+validate the instrument} (Section~\ref{sec:instrument}). On an open
+benchmark of 10.6 million voting decisions (101st--119th Congresses),
+we develop an ensemble model that reads rollcall-level text with
+sentence encoders, maps it to vote-choice parameters through deep
+heads, anchors on each member's behavioral history, and reports
+calibrated probabilities. On strictly future votes within a congress it
+reaches \champForecastAcc\% accuracy (\champContestedAcc\% on contested
+votes; log loss \champForecastLL), far beyond both the classical
+spatial model and the 2011--2016 text-based models, which---under
+proper scoring rules and honest temporal splits---never actually beat a
+simple table of member voting rates (Table~\ref{tab:regime}). Because a
+measurement instrument is only as credible as its evaluation, we score
+every model under four regimes of increasing difficulty and add a fifth
+test immune to researcher iteration by construction: models frozen and
+hash-pinned, then scored on the \prospectiveN{} votes Congress cast in
+the following weeks. The frozen model's prospective performance
+(\prospectiveVoneLL{} log loss, \prospectiveVoneAcc\% accuracy) matches
+its development performance, certifying that the numbers here are not
+artifacts of adaptive overfitting.
 
-Three sets of results follow. \emph{The modern stack is much better.}
-Our best model---a blend of towers that read rollcall-level text with
-modern sentence encoders, project it through deep parameter heads, and
-anchor on member voting histories with temporally calibrated
-probabilities---reaches a forecast-regime test log loss of
-\champForecastLL{} (accuracy \champForecastAcc\%, contested-vote accuracy
-\champContestedAcc\%, AUC \champForecastAUC), against
-\gbTcalForecastLL{} for the best-case classical architecture and
-\memberqForecastLL{} for the strongest count baseline. The gains
-decompose informatively: rollcall-level text construction and the
-member-history offset contribute most; swapping a larger text encoder
-into the classical architecture buys little; post-hoc temporal
-calibration is worth more than a decade of architecture change.
+\emph{Second, we measure} (Sections~\ref{sec:members}
+and~\ref{sec:bills}). From the instrument's internals we extract, and
+validate against external benchmarks, a suite of member- and bill-level
+measures. Learned member positions correlate with DW-NOMINATE's first
+dimension at $r = .98$ (Figure~\ref{fig:validation})---the sanity
+check---and then go further. A \emph{party-loyalty residual} isolates
+discipline from ideology and independently rediscovers the canonical
+mavericks of the last decade---Walter Jones, Justin Amash, Collin
+Peterson, Kyrsten Sinema---from votes alone
+(Figure~\ref{fig:loyalty}). \emph{Issue-specific positions} recover,
+without any text about the members, the libertarian non-interventionist
+bloc (dovish on defense, civil-libertarian on crime, otherwise very
+conservative) and the hawkish wing of the Democratic party
+(Figure~\ref{fig:issues}). At the bill level, every rollcall acquires a
+\emph{cutpoint}---the location on the ideological scale where a member
+becomes indifferent---and the distribution of cutpoints against the
+distribution of members maps the strategic structure of the agenda:
+which policy areas divide the parties at the center, which split one
+party internally, which pass by consensus
+(Figure~\ref{fig:cutpoints}). And because the model outputs calibrated
+probabilities for every vote, its largest errors constitute a new
+dataset of \emph{out-of-character votes}---defections the best
+available behavioral model could not see coming
+(Figure~\ref{fig:surprises})---a systematic starting point for studying
+pressure, persuasion, and idiosyncratic representation.
 
-\emph{The old yardstick was broken.} Under proper scoring, the
-Gerrish--Blei-style spatial model with text-predicted bill parameters is
-\emph{worse than predicting the base rate} in forecast regimes
-(log loss \gbRawForecastLL{} against \constantForecastLL{} for the
-constant model) despite respectable accuracy---a pure calibration
-failure invisible to the metrics of the original papers. Even after we
-repair its calibration, it does not beat a member-by-question-type count
-table. And contrary to our own expectation, the literature's
-random-rollcall holdout was \emph{not} materially easier than a temporal
-split once test composition is held fixed: the regime choices that
-matter enormously are vote completion versus rollcall holdout, and
-within-congress versus cross-congress.
+\emph{Third, we measure the walls} (Section~\ref{sec:limits}). Two
+boundaries survived every attempt we pre-registered against them, and
+both are substantive findings about Congress rather than engineering
+shortfalls. Amendment votes carry a third of the model's remaining
+error, yet supplying amendments' actual purpose text makes prediction
+\emph{worse}, not better---a result we establish with a
+placebo-controlled design. Within a bill, the model exploits the
+correlation of the amendment series more effectively than the
+amendments' content: amendment coalitions form around deals, not
+language. That is a measured boundary on what legislative text
+reveals---content organizes coalitions on final passage, context
+organizes them on amendments. Second, when majority control of the
+House changed in 2022, every history-based measure partially inverted:
+pooled member records \emph{anti-transfer} across the flip (a member
+who reliably supported procedural motions in the majority reliably
+opposes them in the minority), our best model's probabilities on the
+unseen congress are worse-calibrated than a three-way count table that
+merely knows who holds the chamber, and a simple logit on frozen
+DW-NOMINATE scores nearly matches the deep model's transfer accuracy
+(\nomctxCongressoutAcc\% versus \champCongressoutAcc\%). The lesson is
+constitutional in the small: a large share of what any vote-based
+measure captures is institutional role, not stable preference, and
+measures built within one majority configuration should be carried
+across configurations only with care. That career-spanning NOMINATE
+scores---estimated from behavior in both roles---are the most durable
+object in our entire horse race is a quiet vindication of the
+traditional design.
 
-\emph{The remaining failures are structural.} A third of residual loss
-sits in amendment votes, and we show---through a sequence of
-pre-registered experiments culminating in a placebo-controlled
-attribution---that giving models the amendments' actual text does not
-help: within a bill, models exploit the \emph{pooling} of an amendment
-series more effectively than they can exploit purpose language, because
-amendment coalitions form around deals, not content. And when the
-majority party changes, everything a model has learned from member
-histories partially inverts: pooled member records \emph{anti-transfer}
-across a majority flip, our best model's probabilities on an unseen
-congress are worse-calibrated than a three-way count table that merely
-knows who holds the chamber, and---strikingly---a simple logit on frozen
-DW-NOMINATE scores nearly matches the deep model's cross-congress
-accuracy (\nomctxCongressoutAcc\% versus \champCongressoutAcc\%).
-Prediction inside a stable political environment and prediction across
-environments are different problems, and only the first is anywhere near
-solved.
+Throughout, we practice the evaluation discipline the measurement
+stakes demand: every development experiment was pre-registered in a
+public ledger with hypothesis and falsification test written before the
+run, selection touched validation data only, the final model comparison
+observed test sets exactly once, and negative results are reported with
+their mechanisms. The benchmark, code, frozen artifacts, and ledger are
+public; a companion paper develops the member-level measures at full
+depth.
 
-Finally, we practice the evaluation discipline we preach. Every
-experiment in the development of our champion model was pre-registered
-in a public ledger with its hypothesis and falsification test written
-before the run; selection used validation data only; the final
-comparison observed the test sets exactly once. The headline forecasting
-claim rests on the frozen prospective protocol: a model pinned by
-checksum in June 2026 scored \prospectiveVoneLL{} log loss
-(\prospectiveVoneAcc\% accuracy) on the \prospectiveN{} votes cast in
-the three weeks after it was frozen---indistinguishable from its
-development test performance, which is precisely what the protocol
-exists to demonstrate.
+\section{The Instrument: Prediction You Can Build Measures On}
+\label{sec:instrument}
 
-\section{The Prediction Problem and Its Regimes}
+\subsection{Data and task}
 
-The unit of prediction is a (member, rollcall) pair: given everything
-observable before the vote, output $P(\text{yea})$. What ``observable''
-means is exactly what distinguishes evaluation regimes, and we argue the
-literature has been imprecise about it in ways that matter.
+We predict individual voting decisions: given everything observable
+before a rollcall, output each member's probability of voting yea. The
+panel covers every yea/nay decision in the 101st through 119th
+Congresses from Voteview \citep{lewis2026voteview}---10.6 million
+decisions---with bill-side information (titles, policy areas, dated
+summary versions, sponsors, amendment purposes) from government
+BILLSTATUS records from the 108th Congress forward. Rollcall-level text
+is assembled strictly from information available before each vote.
+Splits are deterministic and content-hashed; a common harness strips
+labels before any model sees evaluation rows.
 
-\textbf{Completion.} Hold out a random ten percent of individual votes;
-other members' votes on the same rollcall remain visible. This is the
-psychometric regime in which ideal-point models are traditionally
-assessed. It measures representation quality, not forecasting: the
-rollcall's own parameters are estimated from its observed votes.
+\subsection{Why evaluation regimes are measurement questions}
 
-\textbf{Random rollcall holdout.} Hold out entire rollcalls at random;
-predict every vote on them from bill features and member history. This
-is the regime of \citet{gerrish2011predicting} and
-\citet{kraft2016embedding}. Held-out rollcalls are interleaved in time
-with training rollcalls.
-
-\textbf{Temporal forecast.} Hold out the final ten percent of rollcalls
-within each congress-chamber by date. Nothing contemporaneous with or
-subsequent to the evaluation votes is observable. This is the regime a
-real forecaster inhabits, up to the stability of the congress itself.
-
-\textbf{Congress-out transfer.} Train through the 116th Congress;
-predict the 118th. Member composition, agenda, and---critically---House
-majority control all change.
-
-\textbf{Prospective.} Freeze a model, record its hash, and score it only
-on votes that occur afterward. Development test sets are observed
-repeatedly across a research program and silently absorb researcher
-degrees of freedom \citep{dwork2015holdout}; the future cannot.
-
-Throughout, our primary metric is log loss---a proper scoring rule that
-rewards calibrated probabilities---with accuracy, AUC, contested-vote
-accuracy (rollcalls with minority share of at least 35 percent), and the
-NOMINATE literature's APRE reported for comparability. The case for
-proper scoring is not pedantry. A downstream user of vote
-predictions---a researcher weighting observations, a whip counting
-uncertain votes---consumes probabilities, and Section~\ref{sec:audit}
-shows that accuracy rankings and probability-quality rankings of the
-classical models are not merely different but sometimes inverted.
-
-\section{Data and Benchmark}
-
-We build from Voteview's individual-level records
-\citep{lewis2026voteview}: every yea/nay cast in the 101st through 119th
-Congresses, 10.6 million decisions after standard exclusions
-(present/abstain codes excluded from the target; presidents excluded).
-Bill-side features come from GovInfo BILLSTATUS records for the 108th
-Congress onward: titles, policy areas, legislative subjects, sponsors,
-dated summary versions, and---parsed for this paper---amendment purpose
-text linked to specific rollcalls through recorded-vote references
-(with a session-numbering correction documented in the appendix).
-Rollcall-level text is assembled strictly from information available
-before each vote: the vote question, the vote description, and the
-latest bill summary version dated before the vote date. Splits are
-deterministic, seeded, and content-hashed; the harness strips labels
-before models see evaluation rows; count baselines, spatial models,
-literature reimplementations, and modern towers all implement one
-interface and are scored by one runner. The benchmark, registry, and
-every result file in this paper are public.
-
-\section{Models}
-\label{sec:models}
-
-\textbf{Count baselines.} Smoothed empirical rates keyed on increasingly
-specific cells: the global rate; member rate; party-by-rollcall
-majority (completion regime only); party- and member-by-question-type
-rates; and, for the transfer regime, rates keyed on \emph{majority
-status} rather than congress, which transfer to an unseen congress by
-construction.
-
-\textbf{Spatial models.} Logistic ideal points fit by stochastic
-gradient descent in one to eight dimensions, and the classical reference
-in which member positions are frozen at DW-NOMINATE scores and only
-rollcall parameters are estimated.
-
-\textbf{Literature reimplementations.} A Gerrish--Blei-style two-stage
-model: ideal points fit on training votes; ridge regression mapping
-rollcall text to each rollcall's discrimination and difficulty; unseen
-rollcalls scored with text-predicted parameters. We run it with
-era-appropriate text features (TF--IDF with latent semantic analysis, the
-closest classical analog to their topics) and, separately, with modern
-sentence embeddings---isolating what representation alone buys the
-classical architecture---and each variant both raw and with temperature
-calibration, the latter a courtesy the original inference would have
-partially supplied through its priors. A Kraft-style bilinear model
-(learned member embeddings against fixed text embeddings) and a logit on
-DW-NOMINATE scores interacted with question type and sponsor-party
-alignment complete the panel.
-
-\textbf{The modern stack.} Two-tower models in which a member embedding
-meets rollcall parameters amortized from text: sentence-embedding
-representations of rollcall-level text (question, description, pre-vote
-bill summary), a two-layer head mapping text to discrimination and
-difficulty, a member-by-question-type empirical-rate offset, and scalar
-temperature-and-bias calibration fit on a \emph{temporal} internal slice
-of training data---the last ten weeks of the training window, never
-validation or test. The final champion is a logistic blend of three such
-towers (MiniLM embeddings with a deep head; embeddings plus TF--IDF; a
-Qwen-encoder variant), with blend weights fit on the same internal
-slice.
-
-Two design lessons deserve emphasis because both were forced on us by
-failed alternatives, documented in the experiment ledger. First,
-forecast models must early-stop and calibrate on \emph{future-like}
-internal data; random in-sample slices produce models that are accurate
-but catastrophically overconfident (we observed a 0.64-to-0.35 log loss
-improvement from this change alone). Second, post-hoc parameters inherit
-the regime of the slice they are fit on: the same blend weights that
-help in the temporal regime hurt in the interleaved one. There is no
-regime-free calibration.
-
-\section{Results I: The Regime Audit}
-\label{sec:audit}
-
-Table~\ref{tab:regime} is the paper's central exhibit: one set of
-models, three forecasting regimes, log loss and accuracy side by side.
-Table~\ref{tab:regimeA} reports the completion regime separately, since
-its models observe same-rollcall votes.
+A model's fitness as a measurement instrument depends on \emph{what
+kind} of prediction it is good at, so we evaluate under regimes of
+increasing difficulty: \emph{completion} (random individual votes held
+out, same-rollcall votes observable---the psychometric setting in which
+ideal points are traditionally assessed); \emph{random rollcall
+holdout} (whole rollcalls held out, interleaved in time---the
+2011--2016 literature's setting); \emph{temporal forecast} (the final
+ten percent of each congress-chamber's rollcalls---a true forecaster's
+setting); \emph{congress-out transfer} (train through the 116th
+Congress, predict the 118th, across the majority flip); and
+\emph{prospective} (hash-pinned frozen models scored only on votes that
+occur after freezing, following the logic of the reusable holdout
+problem \citep{dwork2015holdout}). Our primary metric is log loss---a
+proper scoring rule that rewards honest probabilities---because
+measurement consumers use the probabilities, not just the
+classifications; accuracy, AUC, contested-vote accuracy, and APRE are
+reported throughout for comparability.
 
 \begin{table}[t]
 \centering
-\caption{The evaluation-regime audit. Test log loss (left panel) and
-accuracy (right panel) under random rollcall holdout, within-congress
-temporal forecast, and whole-congress-out transfer. Same-day paired
-fits; each test set observed once for the final comparison.}
+\caption{One set of models under three forecasting regimes. Log loss
+(left panel) and accuracy (right panel); same-day paired fits; each
+test set observed once for this comparison. The completion regime is
+reported separately in Appendix Table~\ref{tab:regimeA}.}
 \label{tab:regime}
 \input{tables/regime_audit.tex}
 \end{table}
 
-\begin{table}[t]
+\begin{figure}[t]
 \centering
-\caption{The completion regime (random held-out votes, other votes on
-the same rollcall observable): the psychometric setting in which
-ideal-point models are traditionally evaluated.}
-\label{tab:regimeA}
-\input{tables/regimeA.tex}
-\end{table}
+\includegraphics[width=.8\linewidth]{figures/regime_lines.pdf}
+\caption{The regime audit at a glance. Moving right, less about the
+vote's context is observable at prediction time. The 2011--2016
+architectures never beat the member-history table in any true
+forecasting regime; the modern gains are large within a congress and
+vanish across the majority flip.}
+\label{fig:regimes}
+\end{figure}
 
-Four patterns organize everything else. First, completion is easy and
-essentially solved: an eight-dimensional ideal-point model reaches
-\regimeAbestLL{} log loss (\regimeAbestAcc\% accuracy), and even one
-dimension nearly matches DW-NOMINATE's decades of refinement. Reading
-completion-regime numbers as ``prediction'' wildly overstates what any
-model can do about the future.
+Table~\ref{tab:regime} and Figure~\ref{fig:regimes} summarize the
+audit; three points matter for everything downstream. Completion is
+essentially solved (an eight-dimensional ideal-point model reaches
+\regimeAbestLL{} log loss; Appendix Table~\ref{tab:regimeA}), so
+completion-regime performance should never be quoted as
+``prediction.'' The 2011--2016 text models, re-implemented faithfully
+and given modern courtesies (Appendix Table~\ref{tab:lit}), fail under
+proper scoring: the Gerrish--Blei-style model's raw forecast log loss
+(\gbRawForecastLL) is worse than predicting the base rate---severe
+miscalibration invisible to the accuracy metrics of the original papers
+(Figure~\ref{fig:calibration})---and even after temperature repair it
+trails a member-by-question count table. And the modern stack clears
+everything within a congress by a wide margin while hitting the same
+wall as everything else across congresses (Section~\ref{sec:limits}).
 
-Second, among true forecasting regimes, the literature's random-rollcall
-choice was more defensible than we expected. Raw numbers differ between
-random-rollcall and temporal splits, but so do the test sets'
-compositions (end-of-congress rollcalls are more lopsided); measured as
-lift over the same-regime null, the two regimes agree almost exactly.
-The audit's sharp cliffs are elsewhere: between completion and any
-rollcall-holdout regime, and between within-congress and cross-congress.
-
-Third, under proper scoring the classical text models were never
-competitive. The raw Gerrish--Blei-style model posts a forecast log loss
-of \gbRawForecastLL---worse than the constant baseline---while its
-accuracy looks acceptable; its discrimination (AUC \gbForecastAUC{}
-versus the champion's \champForecastAUC) and its calibration are both at
-fault, and repairing calibration still leaves it behind a count table.
-The Kraft-style bilinear model, given every modern courtesy, reaches
-\kraftForecastLL{} and also trails the member-by-question baseline. The
-2011--2016 program, in short, demonstrated that text \emph{correlates}
-with voting; it did not demonstrate forecasting value over member
-history, because it never raced against member history under a proper
-score.
-
-Fourth, the modern stack clears all of it by a wide margin, and the
-final blend adds a further \champGain{} log loss over the best single
-tower, with its validation-predicted gain reproducing almost exactly on
-the once-observed test set.
-
-\section{Results II: What Moves the Needle, and What Does Not}
-
-Table~\ref{tab:ablation} traces the path from a metadata-only tower to
-the champion. The large steps are rollcall-level text construction
-(giving content to nominations and amendments rather than reusing parent
-bill text), the member-by-question offset, the deep parameter head, and
-temporal calibration. The small or negative steps are equally
-instructive, and we report them with mechanisms rather than as bare
-nulls; the full pre-registered ledger is in the appendix.
-
-\begin{table}[t]
+\begin{figure}[t]
 \centering
-\caption{Ablation path in the temporal forecast regime (test set).
-Each row modifies the configuration above it; the final rows blend
-towers.}
-\label{tab:ablation}
-\input{tables/ablation.tex}
-\end{table}
+\includegraphics[width=.5\linewidth]{figures/calibration.pdf}
+\caption{Calibration on strictly future rollcalls. The 2011-style
+model's probabilities are badly overconfident---the failure mode that
+accuracy metrics cannot see and that makes uncalibrated model output
+unusable as measurement.}
+\label{fig:calibration}
+\end{figure}
 
-\begin{table}[t]
-\centering
-\caption{The literature horse race in detail: forecast-regime log loss,
-AUC, and contested-vote accuracy, with random-rollcall figures for
-comparison.}
-\label{tab:lit}
-\input{tables/litrace.tex}
-\end{table}
+\subsection{The champion and its certification}
 
-\textbf{Bigger encoders do not help.} Replacing a 384-dimensional
-MiniLM encoder with a 1,024-dimensional long-context model (a
-sixteen-fold larger text budget) left the forecast essentially
-unchanged and made long-bill votes slightly \emph{worse}---rejecting the
-natural hypothesis that summary truncation was the binding constraint.
-Omnibus coalitions are assembled around deals whose terms are not in the
-text. The larger encoder's tower does, however, earn a place in the
-final blend: its errors are decorrelated from the MiniLM tower's, which
-is worth more than its solo performance.
+The final model is a logistic blend of three two-tower networks. Each
+tower embeds members in a latent space and amortizes each rollcall's
+choice parameters from its text---the vote question, the vote
+description, and the latest pre-vote bill summary, encoded by modern
+sentence encoders (the three towers vary the encoder and text
+representation)---anchored by a member-by-question-type empirical rate
+and calibrated on a temporal internal slice of training data.
+Development followed a pre-registered ledger; the ablation path and the
+full set of negative results (bigger encoders, recency weighting,
+within-bill context features, per-bucket calibration) are in
+Appendix~\ref{app:ledger} with their diagnosed mechanisms.
 
-\textbf{Amendment text does not help, and we can say why.}
-Amendment votes carry roughly thirty percent of residual loss, and
-two-thirds of amendment rollcalls have no amendment-specific text---so
-enriching them looked like the obvious next win. It is not. We parsed
-purpose language for every amendment in the BILLSTATUS corpus, joined it
-to rollcalls through recorded-vote references (correcting a
-session-numbering trap that silently mismatches forty percent of joins),
-and rebuilt the text pipeline three ways, from aggressive to minimal.
-Every variant made the model \emph{worse}, by amounts insensitive to
-whether the joined text was correct; a placebo rebuild that changed the
-file without changing any content reproduced the champion exactly,
-exonerating the pipeline mechanics. The mechanism: when a bill's
-amendments share the parent bill's text, the model assigns the whole
-series nearly identical parameters---an implicit pooled estimate of a
-highly correlated block of votes. Distinct purpose text replaces that
-pooling with per-amendment parameters driven by content, and content
-predicts amendment coalitions worse than the bill's identity does. The
-error decomposition (Table~\ref{tab:decomp}) locates the loss; the
-experiments show it is not a text problem.
+On the temporal forecast test---\forecastTestN{} future votes---the
+blend reaches \champForecastLL{} log loss, \champForecastAcc\%
+accuracy, \champContestedAcc\% contested accuracy, APRE \champAPRE.
+For certification beyond any possibility of test-set contamination: a
+predecessor model frozen on June 12, 2026 (weights hash-pinned, fit
+through June 9) scored \prospectiveVoneLL{} log loss and
+\prospectiveVoneAcc\% accuracy on the \prospectiveRC{} rollcalls and
+\prospectiveN{} votes Congress cast June 10--30---statistically
+indistinguishable from its development test numbers
+(Table~\ref{tab:prospective}). The blend, frozen July 3, has begun its
+own prospective clock. Measurement built on this instrument inherits
+that certification.
 
 \begin{table}[t]
 \centering
-\caption{Where the loss lives: test log loss by question type, prior
-champion versus final blend, temporal forecast regime.}
-\label{tab:decomp}
-\input{tables/error_decomp.tex}
-\end{table}
-
-\textbf{Member-history refinements do not help.} Recency-weighted member
-rates (halving the effective sample behind each cell) and within-bill
-context features (a member's vote on the same bill's previous rollcall)
-both failed pre-registered validation tests---the latter despite passing
-its synthetic checks at the information-theoretic optimum, because the
-real-data signal available under a strict no-leakage harness is small
-and its exploitation destabilizes the rest of the model.
-
-\section{Results III: The Transfer Wall}
-\label{sec:transfer}
-
-The congress-out column of Table~\ref{tab:regime} is the paper's
-sobering exhibit. Train through 2021, predict 2023--24---across the
-House majority flip---and the champion's log loss more than doubles
-while its accuracy falls below every within-congress baseline. Three
-further facts sharpen the diagnosis.
-
-First, the honest floor for this regime is a count table keyed on
-majority status, chamber, and question type, all knowable before any
-vote: it scores \majorityCongressoutLL{}---\emph{better calibrated than
-the champion's} \champCongressoutLL. Second, member history is not
-merely unhelpful across the flip; it is poisonous. A pooled
-member-by-question table anti-transfers (log loss 0.740), because
-procedural voting is majority-role behavior: the member who reliably
-voted yea on previous questions as a majority member votes nay on them
-in the minority, and his history argues confidently for the wrong side.
-We verify the mechanism in a synthetic two-world experiment: where
-behavior is majority-driven, member history anti-transfers exactly as
-observed; where behavior is a stable personal trait, it transfers
-nearly perfectly. Real congressional behavior is evidently a blend, with
-the majority-role component dominating procedural votes. Third, simply
-handing the model majority-status features does not fix it---within a
-congress the member offsets are strictly more informative, so training
-assigns the majority features no weight, and at transfer time they
-cannot substitute for the collapsed offsets. A genuine solution likely
-requires majority-conditioned training, which we leave as an open
-problem posed to the benchmark. Meanwhile, a logit on frozen DW-NOMINATE
-scores---positions estimated from full careers spanning both majority
-roles---very nearly matches the champion's transfer accuracy
-(\nomctxCongressoutAcc\% versus \champCongressoutAcc\%), a quiet
-vindication of career-spanning measurement precisely where short-window
-learning fails.
-
-\section{Results IV: The Prospective Test}
-
-Development test sets, however carefully rationed, are observed by the
-researchers iterating on them. Our headline forecasting claim therefore
-rests elsewhere. On June 12, 2026, we froze the then-champion single
-tower---weights pickled, SHA-256 recorded---fit on all votes through
-June 9. Every vote cast afterward constitutes an evaluation set that did
-not exist when the model was finalized. Through June 30, that is
-\prospectiveRC{} rollcalls and \prospectiveN{} individual votes: log
-loss \prospectiveVoneLL, accuracy \prospectiveVoneAcc\%---statistically
-indistinguishable from the model's development-test performance, which
-is the entire point: the development numbers in this paper are not
-inflated by adaptive overfitting. The blend champion, frozen July 3, has
-begun its own clock (identical log loss, one point higher accuracy, on
-a window too small to separate them); both artifacts remain pinned and
-will accumulate evidence as Congress votes.
-Table~\ref{tab:prospective} reports the ledger.
-
-\begin{table}[t]
-\centering
-\caption{Frozen prospective artifacts, scored only on votes occurring
-after each model's data snapshot. Cluster-bootstrap intervals in the
-appendix.}
+\caption{The prospective ledger: frozen, hash-pinned artifacts scored
+only on votes cast after each model's data snapshot.}
 \label{tab:prospective}
 \input{tables/prospective.tex}
 \end{table}
 
-\section{Implications}
+\section{Measuring Members}
+\label{sec:members}
 
-For measurement, the results cut two ways. The completion regime's
-near-ceiling performance and the transfer regime's collapse together
-imply that vote-based scores are exquisitely good summaries of behavior
-\emph{within} an institutional configuration and should be handled with
-care \emph{across} them; the surprising cross-congress durability of
-career-spanning NOMINATE scores, relative to far richer short-window
-models, is a genuine argument for the traditional approach's design.
-For the text-as-data program, the lesson is that representation was
-never the bottleneck in this domain: what modern models add is mostly
-better use of behavioral history and better-calibrated uncertainty, and
-the marginal value of reading legislative language, while real, is
-concentrated in bills whose content actually organizes the coalition.
-For forecasting practice, temporal calibration and regime-matched
-validation slices matter more than architecture, and probabilities
-reported without a proper-scoring audit should be treated as
-decorative.
+\subsection{Positions, validated}
 
-A companion paper uses the champion's internals for substantive
-measurement---party-loyalty residuals, issue-specific positions, and
-out-of-character votes. The benchmark, leaderboard, frozen artifacts,
-and complete experiment ledger (including every negative result
-reported above, pre-registered before its run) are public; the transfer
-problem in Section~\ref{sec:transfer} is offered to the field as the
-benchmark's standing challenge.
+The instrument's member representations should first reproduce what we
+already trust. Fitting the benchmark's one-dimensional spatial model
+per chamber (with the identification conventions documented in the
+repository), learned positions correlate with DW-NOMINATE's first
+dimension at $r = .98$ in both chambers---and at $.84$--$.91$
+\emph{within} party, where the information is
+(Figure~\ref{fig:validation}). Nothing about DW-NOMINATE entered the
+estimation; the agreement is two instruments discovering the same
+object.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.95\linewidth]{figures/validation_scatter.pdf}
+\caption{Validation: positions learned by the benchmark's spatial model
+(vertical axis) against DW-NOMINATE (horizontal), by chamber. Blue:
+Democrats; red: Republicans.}
+\label{fig:validation}
+\end{figure}
+
+\subsection{Loyalty beyond ideology}
+
+Ideology and discipline are conceptually distinct---a centrist who
+always answers the whip differs from a centrist who defects---but
+one-dimensional scores conflate them. Using the instrument, we compute
+each member's \emph{expected} behavior on party-unity votes given their
+position, and define the \emph{loyalty residual} as actual minus
+expected unity-vote support. Figure~\ref{fig:loyalty} shows the tails
+of the recent-era distribution. The measure, computed from votes alone,
+independently identifies the members journalists and whips would name:
+Walter Jones as the era's outstanding maverick, then Justin Amash,
+Jeff Van Drew (measured before his party switch---the residual saw it
+coming), Collin Peterson, Ileana Ros-Lehtinen, Kyrsten Sinema, Henry
+Cuellar. At the loyal extreme sit members whose votes are
+\emph{more} partisan than their positions predict. The residual is a
+measure of discipline net of preference---the quantity party-unity
+scores are often mistaken for.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.85\linewidth]{figures/loyalty_caterpillar.pdf}
+\caption{The loyalty residual: actual minus position-predicted support
+for the party on party-unity votes, 115th--119th Congresses (members
+with at least 300 unity votes; most extreme members shown). Blue:
+Democrats; red: Republicans.}
+\label{fig:loyalty}
+\end{figure}
+
+\subsection{Issue-specific positions}
+
+Fitting the spatial model within policy areas yields per-topic
+positions, and their deviations from each member's overall position
+measure issue-specific ideology---the structure a single dimension
+throws away. Figure~\ref{fig:issues} maps the largest deviations of
+the modern era. The recovered patterns match qualitative knowledge
+that never entered the model: the libertarian bloc (Ron and Rand Paul,
+Amash-adjacent members such as Brat, Roy, and Good) is sharply
+\emph{less} conservative than its overall position on defense and on
+crime---non-interventionism and civil libertarianism measured from
+votes alone---while a set of moderate Democrats deviates hawkishly on
+armed forces and border-adjacent areas. These per-topic positions are
+validated instruments (they pass party-stereotype sanity checks
+documented in the repository); a companion paper develops them at full
+depth, including their movement over time.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.9\linewidth]{figures/issue_deviations.pdf}
+\caption{Issue-specific deviations from overall positions, members with
+the largest deviations (rows) by policy area (columns). Red: more
+conservative on this issue than the member's overall record; blue: less.}
+\label{fig:issues}
+\end{figure}
+
+\subsection{Out-of-character votes}
+
+A calibrated model of member behavior defines, vote by vote, what would
+be surprising---and its largest realized surprises are a dataset no
+existing measure provides. Figure~\ref{fig:surprises} shows the
+decisions the frozen champion, fit on the member's entire record,
+still got confidently wrong. These are not model noise; inspected, they
+are recognizable episodes---high-pressure defections, district-driven
+crossovers, protest votes---now identifiable systematically rather than
+anecdotally. We release the full surprise ranking as a research
+resource: a sampling frame for studying lobbying, leadership pressure,
+and the votes that end careers.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.9\linewidth]{figures/surprises.pdf}
+\caption{Out-of-character votes: the largest in-sample surprises of the
+frozen champion (one per member shown). Dots: the model's probability
+of yea given the member's full record; squares: the vote actually cast.}
+\label{fig:surprises}
+\end{figure}
+
+\section{Measuring Bills}
+\label{sec:bills}
+
+The same machinery measures the \emph{agenda}. Every rollcall acquires
+a discrimination (how strongly it separates the space) and a
+cutpoint---the position of an indifferent member.
+Figure~\ref{fig:cutpoints} plots the 118th House: the member
+distribution is bimodal and the cutpoint distribution concentrates in
+the empty center---the signature of an agenda organized to divide the
+parties---but the policy-area breakdown shows the exceptions in
+measurable form: areas whose median cutpoint sits inside a party
+(internal factional fights) and areas whose cutpoints sit at the
+extremes (consensus votes that separate only the flanks).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.95\linewidth]{figures/cutpoints_house118.pdf}
+\caption{The 118th House measured. Top: member positions by party
+(filled) and the distribution of rollcall cutpoints (outline). Bottom:
+cutpoints by policy area (ticks: medians). Cutpoints shown where
+discrimination is large enough for the location to be identified.}
+\label{fig:cutpoints}
+\end{figure}
+
+Text enters the measurement here: the model's text-to-parameter head is
+a learned map from legislative language to conflict structure, and its
+successes and failures delineate what bill content \emph{is} to a
+coalition. On final-passage votes, text carries real information---the
+ablation path in Appendix Table~\ref{tab:ablation} shows rollcall-level
+text construction contributing some of the largest gains. On
+amendments, Section~\ref{sec:limits} shows the opposite, and the
+contrast is itself the measurement: language predicts coalitions where
+coalitions form on content, and the places it fails are the places
+procedure and bargaining, not content, do the organizing.
+
+\section{Measuring the Limits---and What They Say About Congress}
+\label{sec:limits}
+
+\subsection{Amendments: deals, not content}
+
+Amendment votes carry roughly thirty percent of the instrument's
+remaining error (Table~\ref{tab:decomp}), and two-thirds of amendment
+rollcalls lack amendment-specific text---so supplying the amendments'
+actual purpose language, parsed from BILLSTATUS records and joined
+through recorded-vote references, looked like the obvious improvement.
+Pre-registered, it failed three ways, and the failure is the finding.
+Corrupted joins, corrected joins, and minimal-footprint text insertions
+all made prediction \emph{worse} by similar amounts; a placebo rebuild
+that changed the data file without changing content reproduced the
+champion exactly, exonerating the pipeline. Mechanism: when a bill's
+amendments share the parent bill's text, the model assigns the series
+nearly identical parameters---an implicit pooled estimate of a
+correlated block. Purpose language replaces that pooling with
+per-amendment, content-driven parameters, and content predicts
+amendment coalitions worse than the bill's identity does. What
+organizes amendment voting is the deal context---who offered it,
+against which bill, at which procedural moment---not what the amendment
+says. This is a measured boundary of the text-as-data program in
+legislatures, and it corroborates, at the micro level of individual
+votes, accounts of amendment politics as coalition management.
+
+\begin{table}[t]
+\centering
+\caption{Where the instrument's error lives: test log loss by question
+type, prior single-tower champion versus the final blend.}
+\label{tab:decomp}
+\input{tables/error_decomp.tex}
+\end{table}
+
+\subsection{Majority control: role, not preference}
+
+The 118th Congress column of Table~\ref{tab:regime} is the deepest
+lesson. Trained through 2021 and asked about 2023--24---across the
+House majority flip---the champion's probabilities are worse-calibrated
+than a count table keyed only on majority status, chamber, and question
+type (\champCongressoutLL{} versus \majorityCongressoutLL); pooled
+member histories are outright poisonous (log loss 0.740), because the
+member who reliably supported procedural motions as a majority member
+reliably opposes them in the minority. A synthetic two-world experiment
+in the appendix isolates the mechanism: where behavior is
+majority-role-driven, member history anti-transfers exactly as
+observed; where behavior is a stable trait, it transfers nearly
+perfectly. Real congressional voting is a blend, and on the procedural
+votes that fill the calendar, the role component dominates. Attempts to
+repair the model with majority-status features fail for an
+identifiable reason---within a congress, member history is strictly
+more informative, so the model never learns to use the features that
+would survive the flip. Meanwhile the logit on frozen, career-spanning
+DW-NOMINATE scores nearly matches the deep model's transfer accuracy
+(\nomctxCongressoutAcc\% versus \champCongressoutAcc\%).
+
+For measurement practice the implications are direct. Vote-derived
+scores estimated within one majority configuration partly measure that
+configuration; comparisons of member scores across a change in control
+confound preference change with role change; and the durability of
+career-spanning estimation---long derided as an assumption of
+implausible preference stability---looks instead like insurance against
+role contamination. For the benchmark, cross-configuration transfer is
+the posted challenge: no model we tested, and none we could design
+under pre-registration, solves it.
+
+\section{Conclusion}
+
+Better prediction has made Congress more measurable: positions that
+match the classical canon, loyalty separated from ideology, issue
+positions recovered from votes alone, an agenda mapped bill by bill,
+and a systematic catalog of the votes no model saw coming. It has also
+made the limits measurable, and they are not incidental: legislative
+language organizes some coalitions and not others, and a large share of
+observed voting behavior belongs to institutional role rather than to
+the member. Instruments, measures, and their documented boundaries are
+released together---including a frozen model whose forecasting claims
+the future itself will continue to audit.
 
 \bibliographystyle{apsr}
 \bibliography{references}
+
+\appendix
+
+\section{Additional Tables}
+\label{app:tables}
+
+\begin{table}[h]
+\centering
+\caption{The completion regime (random held-out votes; same-rollcall
+votes observable): the setting in which ideal-point models are
+traditionally evaluated, essentially solved.}
+\label{tab:regimeA}
+\input{tables/regimeA.tex}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{The literature horse race in detail: 2011--2016 architectures
+reimplemented with era-matched and modern text representations, raw and
+calibrated.}
+\label{tab:lit}
+\input{tables/litrace.tex}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Ablation path of the modern stack in the temporal forecast
+regime.}
+\label{tab:ablation}
+\input{tables/ablation.tex}
+\end{table}
+
+\section{The Experiment Ledger}
+\label{app:ledger}
+
+Every development experiment was pre-registered in the repository's
+ledger before its first run, with a hypothesis, a pre-vote-knowability
+argument for any new feature, and a falsification test. Selection used
+validation sets only; the three-model final comparison observed the
+test sets once. The ledger records, with diagnosed mechanisms: the
+encoder-scale negative (a $16\times$ larger text budget does not
+improve forecasts and worsens long-bill votes); the amendment-text
+negatives and their placebo control (Section~\ref{sec:limits}); the
+recency-weighting negative (decayed member rates add estimator noise
+exceeding any drift signal); the within-bill context negative (features
+that pass synthetic tests at the information-theoretic optimum
+destabilize joint training on real data); the per-bucket calibration
+negative; and the regime-inheritance result (post-hoc parameters fit on
+a temporal development slice transfer to temporal evaluation and break
+on interleaved evaluation). Full reproduction instructions accompany
+the repository.
 
 \end{document}
