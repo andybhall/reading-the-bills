@@ -1,0 +1,16 @@
+\begin{tabular}{lcccc}
+\toprule
+Configuration & Log loss & Acc.\ (\%) & Contested (\%) & APRE \\
+\midrule
+Metadata tower & 0.511 & 72.3 & 60.7 & -0.05 \\
+TF-IDF tower + member offset & 0.411 & 80.1 & 75.0 & 0.24 \\
+Embedding tower (v1 bill text) & 0.435 & 79.0 & 75.9 & 0.20 \\
+Embedding tower (v2 rollcall text) & 0.423 & 80.5 & 76.8 & 0.26 \\
+Embedding tower (v2, $k{=}16$) & 0.424 & 80.7 & 77.0 & 0.27 \\
+\quad + MLP head & 0.645 & 82.0 & 81.4 & 0.32 \\
+\quad + temporal calibration & 0.348 & 85.2 & 84.0 & 0.44 \\
+Qwen-encoder tower & 0.360 & 84.2 & 82.4 & 0.40 \\
+Two-tower blend & 0.337 & 85.6 & 84.4 & 0.45 \\
+Three-tower blend (champion) & 0.324 & 86.2 & 85.1 & 0.48 \\
+\bottomrule
+\end{tabular}

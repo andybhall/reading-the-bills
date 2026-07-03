@@ -1,0 +1,17 @@
+\begin{tabular}{lccccc}
+\toprule
+Model & \multicolumn{3}{c}{Forecast: LL / AUC / contested acc.} & \multicolumn{2}{c}{Random rollcall: LL / AUC} \\
+\midrule
+Constant rate & 0.617 & 0.500 & 52.7 & 0.659 & 0.500 \\
+Party $\times$ question rate & 0.466 & 0.805 & 69.8 & 0.504 & 0.797 \\
+Member $\times$ question rate & 0.459 & 0.812 & 69.2 & 0.494 & 0.807 \\
+NOMINATE $\times$ context logit & 0.532 & 0.740 & 59.6 & 0.587 & 0.713 \\
+GB-style spatial (TF-IDF) & 0.803 & 0.689 & 57.6 & 1.054 & 0.687 \\
+GB-style spatial (TF-IDF, calibrated) & 0.566 & 0.689 & 57.1 & 0.685 & 0.687 \\
+GB-style spatial (mod.\ emb., calibrated) & 0.556 & 0.699 & 55.8 & 0.662 & 0.670 \\
+Kraft-style bilinear & 0.497 & 0.790 & 67.2 & 0.522 & 0.794 \\
+TF-IDF tower + member offset & 0.411 & 0.860 & 75.0 & 0.448 & 0.854 \\
+MiniLM-MLP tower (prior champion) & 0.348 & 0.906 & 84.0 & 0.417 & 0.880 \\
+Three-tower blend (champion) & 0.324 & 0.919 & 85.1 & 0.390 & 0.896 \\
+\bottomrule
+\end{tabular}
