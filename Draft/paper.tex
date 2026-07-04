@@ -484,17 +484,25 @@ member-standard-deviations ($r = \cutComboR$, against \cutConstMAE{}
 with no features) and calls the coalition's direction correctly
 \dirCombo\% of the time (chance: \dirConst\%).
 
-The decomposition is as informative as the headline. Metadata alone
-locates cutpoints almost as well as anything ($\mathrm{MAE} =
-\cutMetaMAE$)---\emph{where} a vote cuts is substantially institutional,
-pinned by question type and sponsorship---but barely improves on chance
-at direction (\dirMeta\%). Text is the mirror image: weaker on
-location, decisively better on direction (\dirTfidf\% for TF--IDF
-features alone). Location is procedure; direction is content. Among
-the text's components, the bill summary carries the most directional
-signal and the vote question the most locational signal
-(Table~\ref{tab:cutpred}, bottom panel), exactly as that division of
-labor implies.
+The decomposition is as informative as the headline, and we report the
+metadata baseline at full strength: because a bill's sponsor is
+directional for passage votes (the yeas fall on the sponsor's side 82
+percent of the time) but a coin flip for amendments (we observe the
+\emph{bill's} sponsor, and amendments are frequently the other party's
+attacks on it), the metadata model includes sponsor-by-question
+interactions---without them, main effects average this structure away
+and metadata looks spuriously weak. So strengthened, metadata alone is
+formidable: it locates cutpoints nearly as well as anything
+($\mathrm{MAE} = \cutMetaMAE$; \emph{where} a vote cuts is
+substantially institutional) and calls direction at \dirMeta\%. Text
+earns its keep \emph{incrementally}: adding it improves every metric,
+most of all direction (+6 points, to \dirCombo\%) and the correlation
+of predicted with realized locations ($r = \cutMetaR \rightarrow
+\cutComboR$). Among the text's components, the bill summary carries
+the most directional signal and the vote question the most locational
+signal (Table~\ref{tab:cutpred}, bottom panel): institutions pin where
+a vote cuts, sponsorship supplies a default side, and content is what
+tells you when the default is wrong.
 
 \begin{table}[t]
 \centering

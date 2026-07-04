@@ -9,10 +9,10 @@
       "n_test_dir": 4623
     },
     "metadata": {
-      "cut_mae": 0.675,
-      "cut_r": 0.461,
-      "dir_acc": 0.59,
-      "dir_acc_identified": 0.571,
+      "cut_mae": 0.66,
+      "cut_r": 0.477,
+      "dir_acc": 0.624,
+      "dir_acc_identified": 0.645,
       "n_test_cut": 3549,
       "n_test_dir": 4623
     },
@@ -33,10 +33,10 @@
       "n_test_dir": 4623
     },
     "embeddings_meta": {
-      "cut_mae": 0.645,
-      "cut_r": 0.539,
-      "dir_acc": 0.658,
-      "dir_acc_identified": 0.66,
+      "cut_mae": 0.639,
+      "cut_r": 0.545,
+      "dir_acc": 0.683,
+      "dir_acc_identified": 0.705,
       "n_test_cut": 3549,
       "n_test_dir": 4623
     }

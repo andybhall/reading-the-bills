@@ -128,12 +128,17 @@ def meta_matrix(rc: pd.DataFrame, fit_levels=None):
     if fit_levels is None:
         fit_levels = {"q": sorted(rc.qbucket.unique()),
                       "s": ["D", "R"], "c": sorted(rc.bill_category.fillna("none").unique())}
-    blocks = [np.stack([(rc.qbucket == q).to_numpy(float) for q in fit_levels["q"]], 1),
-              np.stack([(rc.sponsor_party.fillna("") == s).to_numpy(float)
-                        for s in fit_levels["s"]], 1),
-              np.stack([(rc.bill_category.fillna("none") == c).to_numpy(float)
-                        for c in fit_levels["c"]], 1),
-              (rc.chamber == "Senate").to_numpy(float)[:, None]]
+    Q = np.stack([(rc.qbucket == q).to_numpy(float) for q in fit_levels["q"]], 1)
+    S = np.stack([(rc.sponsor_party.fillna("") == s).to_numpy(float)
+                  for s in fit_levels["s"]], 1)
+    C = np.stack([(rc.bill_category.fillna("none") == c).to_numpy(float)
+                  for c in fit_levels["c"]], 1)
+    # sponsor x question interactions: the sponsor's side predicts a
+    # passage vote's direction (82%) but is a coin flip on amendments
+    # (we observe the BILL's sponsor, not the amender's party) — main
+    # effects alone average that away and understate metadata
+    SQ = np.hstack([S[:, [i]] * Q for i in range(S.shape[1])])
+    blocks = [Q, S, C, SQ, (rc.chamber == "Senate").to_numpy(float)[:, None]]
     return np.hstack(blocks), fit_levels
 
 
