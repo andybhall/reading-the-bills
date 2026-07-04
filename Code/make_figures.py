@@ -68,30 +68,51 @@ def f1_validation():
 
 # ---------------------------------------------------------------- F2
 def f2_loyalty():
+    """The full loyalty-residual distribution for every member (recent
+    era), not a curated tail: (a) its shape by party; (b) its
+    independence from ideology, with the extremes labeled where they sit
+    in the complete cloud."""
     sig = pd.read_parquet(RES / "member_signals.parquet")
     recent = sig[sig.congress >= 115]
     g = (recent.groupby(["icpsr", "bioname", "party_code", "state_abbrev"])
-         .agg(resid=("loyalty_residual", "mean"), n=("n_unity", "sum"))
+         .agg(resid=("loyalty_residual", "mean"), n=("n_unity", "sum"),
+              x=("ideal_1d", "mean"))
          .reset_index())
-    g = g[g.n >= 300]
-    rows = []
-    for pc in (100.0, 200.0):
-        p = g[g.party_code == pc].sort_values("resid")
-        rows.append(p.head(9))   # mavericks
-        rows.append(p.tail(4))   # loyalists
-    d = pd.concat(rows).sort_values("resid")
-    fig, ax = plt.subplots(figsize=(6.4, 5.4))
-    y = np.arange(len(d))
-    ax.hlines(y, 0, d.resid, color=party_color(d.party_code), lw=1.4, alpha=0.75)
-    ax.scatter(d.resid, y, c=party_color(d.party_code), s=26, zorder=3)
-    ax.set_yticks(y)
-    ax.set_yticklabels([shortname(b, s) for b, s in zip(d.bioname, d.state_abbrev)],
-                       fontsize=8)
-    ax.axvline(0, color="#444444", lw=0.8)
-    ax.set_xlabel("Party-unity loyalty beyond ideology "
-                  "(share of unity votes, 115th–119th Congresses)")
-    ax.set_title("Mavericks and soldiers: loyalty residuals")
-    save(fig, "loyalty_caterpillar.pdf")
+    g = g[(g.n >= 100) & g.party_code.isin([100.0, 200.0])]
+    g = g[~g.state_abbrev.isin(["GU", "PR", "VI", "DC", "AS", "MP"])]
+
+    fig, (ax1, ax2) = plt.subplots(
+        1, 2, figsize=(8.6, 3.9), gridspec_kw={"width_ratios": [1, 1.5]})
+
+    bins = np.linspace(-0.22, 0.10, 55)
+    for pc, color, lab in ((100.0, DEM, "Democrats"), (200.0, REP, "Republicans")):
+        ax1.hist(g.loc[g.party_code == pc, "resid"], bins=bins, color=color,
+                 alpha=0.55, label=lab)
+    ax1.axvline(0, color="#444444", lw=0.8)
+    ax1.legend(frameon=False, fontsize=8)
+    ax1.set_xlabel("Loyalty residual")
+    ax1.set_ylabel("Members")
+    ax1.set_title(f"All {len(g):,} members")
+
+    ax2.axhline(0, color="#cccccc", lw=0.8, zorder=0)
+    ax2.scatter(g.x, g.resid, s=10, alpha=0.5, c=party_color(g.party_code),
+                linewidths=0)
+    lab = pd.concat([g.nsmallest(8, "resid"), g.nlargest(2, "resid")])
+    lab = lab.sort_values("resid")
+    for i, r in enumerate(lab.itertuples()):  # alternate label sides
+        dx = 5 if i % 2 else -5
+        ax2.annotate(shortname(r.bioname, r.state_abbrev), (r.x, r.resid),
+                     fontsize=7, xytext=(dx, -2), textcoords="offset points",
+                     ha="left" if dx > 0 else "right")
+    rho = np.corrcoef(g.x.abs(), g.resid)[0, 1]
+    ax2.set_xlabel("Ideal point (liberal $\\leftarrow$ $\\rightarrow$ conservative)")
+    ax2.set_ylabel("Loyalty residual")
+    ax2.set_title(f"Loyalty is not ideology "
+                  f"($\\rho$ with extremity = {rho:.2f})")
+    fig.suptitle("Party loyalty beyond ideology, 115th–119th Congresses",
+                 fontweight="bold", y=1.02)
+    fig.tight_layout()
+    save(fig, "loyalty_distribution.pdf")
 
 
 # ---------------------------------------------------------------- F3
