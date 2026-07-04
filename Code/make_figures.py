@@ -7,6 +7,7 @@ Outputs PDF figures to Draft/figures/. Inputs: the measurement layer
 Run: python3 Code/make_figures.py
 """
 
+import json
 from pathlib import Path
 
 import matplotlib
@@ -328,6 +329,67 @@ def f7_regimes():
     save(fig, "regime_lines.pdf")
 
 
+# ---------------------------------------------------------------- F8
+def f8_cutpoint_prediction():
+    rc = pd.read_parquet(MEAS / "cutpoint_rollcalls.parquet")
+    d = rc[rc.test & rc.identified & rc.pred_embeddings_meta.notna()]
+    d = d[d.cut_std.between(-4, 4)]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8.4, 3.8),
+                                   gridspec_kw={"width_ratios": [1, 1.15]})
+    ax1.plot([-4, 4], [-4, 4], color="#bbbbbb", lw=0.8, zorder=0)
+    ax1.scatter(d.pred_embeddings_meta, d.cut_std, s=6, alpha=0.3,
+                color="#333333", linewidths=0)
+    r = np.corrcoef(d.pred_embeddings_meta, d.cut_std)[0, 1]
+    ax1.set_xlabel("Predicted cutpoint (text + metadata)")
+    ax1.set_ylabel("Realized cutpoint")
+    ax1.set_title(f"Held-out future rollcalls (r = {r:.2f})")
+
+    j = json.loads((MEAS / "cutpoint_pred.json").read_text())
+    names = [("metadata", "Metadata only"), ("tfidf_svd", "Text: TF-IDF"),
+             ("embeddings", "Text: embeddings"),
+             ("embeddings_meta", "Text + metadata")]
+    y = np.arange(len(names))
+    mae = [j["sets"][k]["cut_mae"] for k, _ in names]
+    acc = [100 * j["sets"][k]["dir_acc_identified"] for k, _ in names]
+    ax2b = ax2.twiny()
+    ax2.barh(y + 0.18, mae, height=0.34, color="#4393c3", label="Cutpoint MAE")
+    ax2b.barh(y - 0.18, acc, height=0.34, color="#b2182b", label="Direction acc. (%)")
+    ax2.axvline(j["sets"]["constant"]["cut_mae"], color="#4393c3", lw=0.9, ls=":")
+    ax2b.axvline(100 * j["sets"]["constant"]["dir_acc_identified"],
+                 color="#b2182b", lw=0.9, ls=":")
+    ax2.set_yticks(y)
+    ax2.set_yticklabels([n for _, n in names], fontsize=8.5)
+    ax2.set_xlabel("Cutpoint MAE (member-SD units; dotted: no-feature baseline)",
+                   fontsize=8, color="#4393c3")
+    ax2b.set_xlabel("Direction accuracy, % (dotted: baseline)", fontsize=8,
+                    color="#b2182b")
+    ax2.set_xlim(0, 1.0)
+    ax2b.set_xlim(50, 70)
+    fig.suptitle("Predicting where a bill cuts the chamber, before the vote",
+                 fontweight="bold", y=1.04)
+    fig.tight_layout()
+    save(fig, "cutpoint_prediction.pdf")
+
+
+# ---------------------------------------------------------------- F9
+def f9_direction_terms():
+    t = pd.read_parquet(MEAS / "cutpoint_terms.parquet")
+    top = pd.concat([t.nsmallest(12, "dir_coef"), t.nlargest(12, "dir_coef")])
+    top = top.sort_values("dir_coef")
+    y = np.arange(len(top))
+    colors = np.where(top.dir_coef > 0, REP, DEM)
+    fig, ax = plt.subplots(figsize=(6.2, 5.2))
+    ax.barh(y, top.dir_coef, color=colors, alpha=0.85)
+    ax.set_yticks(y)
+    ax.set_yticklabels(top.term, fontsize=8.5)
+    ax.axvline(0, color="#444444", lw=0.8)
+    ax.set_xlabel("Coefficient: bill-summary language $\\rightarrow$ "
+                  "coalition direction")
+    ax.set_title("The language of left- and right-recruiting bills\n"
+                 "(final-passage votes; blue: liberal-yea, red: conservative-yea)")
+    save(fig, "direction_terms.pdf")
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     f1_validation()
@@ -338,6 +400,8 @@ def main():
     f4_cutpoints() if (MEAS / "cutpoints_house118.parquet").exists() else print("skip F4 (no measures yet)")
     f6_calibration()
     f7_regimes()
+    f8_cutpoint_prediction()
+    f9_direction_terms()
 
 
 if __name__ == "__main__":

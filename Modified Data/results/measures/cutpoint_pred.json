@@ -1,0 +1,61 @@
+{
+  "sets": {
+    "constant": {
+      "cut_mae": 0.856,
+      "cut_r": 0.0,
+      "dir_acc": 0.584,
+      "dir_acc_identified": 0.558,
+      "n_test_cut": 3549,
+      "n_test_dir": 4623
+    },
+    "metadata": {
+      "cut_mae": 0.675,
+      "cut_r": 0.461,
+      "dir_acc": 0.59,
+      "dir_acc_identified": 0.571,
+      "n_test_cut": 3549,
+      "n_test_dir": 4623
+    },
+    "tfidf_svd": {
+      "cut_mae": 0.742,
+      "cut_r": 0.43,
+      "dir_acc": 0.627,
+      "dir_acc_identified": 0.613,
+      "n_test_cut": 3549,
+      "n_test_dir": 4623
+    },
+    "embeddings": {
+      "cut_mae": 0.735,
+      "cut_r": 0.425,
+      "dir_acc": 0.6,
+      "dir_acc_identified": 0.595,
+      "n_test_cut": 3549,
+      "n_test_dir": 4623
+    },
+    "embeddings_meta": {
+      "cut_mae": 0.645,
+      "cut_r": 0.539,
+      "dir_acc": 0.658,
+      "dir_acc_identified": 0.66,
+      "n_test_cut": 3549,
+      "n_test_dir": 4623
+    }
+  },
+  "component_ablation": {
+    "t_question": {
+      "cut_mae": 0.763,
+      "cut_r": 0.41,
+      "dir_acc_identified": 0.582
+    },
+    "t_desc": {
+      "cut_mae": 0.813,
+      "cut_r": 0.247,
+      "dir_acc_identified": 0.572
+    },
+    "t_summary": {
+      "cut_mae": 0.765,
+      "cut_r": 0.379,
+      "dir_acc_identified": 0.597
+    }
+  }
+}

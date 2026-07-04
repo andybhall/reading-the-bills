@@ -224,6 +224,29 @@ def issue_topics():
             rows, "lrccccll")
 
 
+def cutpoint_pred():
+    """The text-to-cutpoint horse race + text-component ablation."""
+    r = json.loads((RES / "measures" / "cutpoint_pred.json").read_text())
+    label = {"constant": "Constant", "metadata": "Metadata only",
+             "tfidf_svd": "Text: TF--IDF", "embeddings": "Text: embeddings",
+             "embeddings_meta": "Text + metadata"}
+    rows = []
+    for k in ("constant", "metadata", "tfidf_svd", "embeddings", "embeddings_meta"):
+        m = r["sets"][k]
+        rows.append(" & ".join([label[k], fmt(m["cut_mae"]), fmt(m["cut_r"], 2),
+                                pct(m["dir_acc_identified"])]))
+    ab_label = {"t_question": "\\quad question only",
+                "t_desc": "\\quad description only",
+                "t_summary": "\\quad bill summary only"}
+    for k, m in r["component_ablation"].items():
+        rows.append(" & ".join([ab_label[k], fmt(m["cut_mae"]),
+                                fmt(m["cut_r"], 2),
+                                pct(m["dir_acc_identified"])]))
+    tabular(OUT / "cutpoint_pred.tex",
+            "Features & Cutpoint MAE & Cutpoint $r$ & Direction acc.\\ (\\%)",
+            rows, "lccc")
+
+
 def prospective():
     rows = []
     for tag, f in (("v1 (emb2-MLP tower)", "prospective_report.json"),
@@ -287,6 +310,19 @@ def numbers(lb):
                                             "forecast108_119", "log_loss"))),
         macro("forecastTestN", f"{int(get(lb, champ, 'forecast108_119', 'n')):,}"),
     ]
+    cp = json.loads((RES / "measures" / "cutpoint_pred.json").read_text())["sets"]
+    lines += [
+        macro("cutComboMAE", fmt(cp["embeddings_meta"]["cut_mae"], 2)),
+        macro("cutComboR", fmt(cp["embeddings_meta"]["cut_r"], 2)),
+        macro("cutMetaMAE", fmt(cp["metadata"]["cut_mae"], 2)),
+        macro("cutMetaR", fmt(cp["metadata"]["cut_r"], 2)),
+        macro("cutConstMAE", fmt(cp["constant"]["cut_mae"], 2)),
+        macro("dirCombo", pct(cp["embeddings_meta"]["dir_acc_identified"])),
+        macro("dirMeta", pct(cp["metadata"]["dir_acc_identified"])),
+        macro("dirTfidf", pct(cp["tfidf_svd"]["dir_acc_identified"])),
+        macro("dirConst", pct(cp["constant"]["dir_acc_identified"])),
+        macro("cutTestN", f"{cp['embeddings_meta']['n_test_cut']:,}"),
+    ]
     (OUT / "numbers.tex").write_text("\n".join(lines) + "\n")
     print(f"wrote {(OUT / 'numbers.tex').relative_to(ROOT)}")
 
@@ -300,6 +336,7 @@ def main():
     ablation(lb)
     error_decomp()
     issue_topics()
+    cutpoint_pred()
     prospective()
     numbers(lb)
     # completeness check: no placeholder cells in any table the draft inputs

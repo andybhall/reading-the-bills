@@ -467,6 +467,87 @@ contrast is itself the measurement: language predicts coalitions where
 coalitions form on content, and the places it fails are the places
 procedure and bargaining, not content, do the organizing.
 
+\subsection{Predicting where a bill will cut, from its text}
+
+The dashboard's premise---that a bill's language locates it on the
+scale before anyone votes---can be tested directly, and
+Table~\ref{tab:cutpred} and Figure~\ref{fig:cutpred} do so. For every
+rollcall in the benchmark we take the realized cutpoint and direction
+(which party's side the yeas fall on) from the spatial fits, hold out
+the final twenty percent of each congress-chamber's rollcalls, and ask
+how well features available \emph{before} the vote predict them:
+nothing; metadata (question type, sponsor party, bill category); text
+alone (in classical and modern representations); or text and metadata
+together. On \cutTestN{} held-out future rollcalls, text plus metadata
+predicts cutpoint locations with a mean error of \cutComboMAE{}
+member-standard-deviations ($r = \cutComboR$, against \cutConstMAE{}
+with no features) and calls the coalition's direction correctly
+\dirCombo\% of the time (chance: \dirConst\%).
+
+The decomposition is as informative as the headline. Metadata alone
+locates cutpoints almost as well as anything ($\mathrm{MAE} =
+\cutMetaMAE$)---\emph{where} a vote cuts is substantially institutional,
+pinned by question type and sponsorship---but barely improves on chance
+at direction (\dirMeta\%). Text is the mirror image: weaker on
+location, decisively better on direction (\dirTfidf\% for TF--IDF
+features alone). Location is procedure; direction is content. Among
+the text's components, the bill summary carries the most directional
+signal and the vote question the most locational signal
+(Table~\ref{tab:cutpred}, bottom panel), exactly as that division of
+labor implies.
+
+\begin{table}[t]
+\centering
+\caption{Predicting held-out future rollcalls' cutpoints and coalition
+directions from pre-vote features. Cutpoint error in
+member-standard-deviation units, identified rollcalls; direction
+accuracy on identified rollcalls. Bottom panel: text components
+separately (TF--IDF pipeline).}
+\label{tab:cutpred}
+\input{tables/cutpoint_pred.tex}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.98\linewidth]{figures/cutpoint_prediction.pdf}
+\caption{Left: predicted against realized cutpoints for held-out future
+rollcalls (text + metadata model). Right: cutpoint error and direction
+accuracy by feature set; dotted lines mark the no-feature baseline.}
+\label{fig:cutpred}
+\end{figure}
+
+\subsection{The language of left- and right-recruiting bills}
+
+What in the text carries the directional signal? Fitting an
+interpretable sparse model (TF--IDF terms, final-passage votes,
+identified rollcalls, alphabetic tokens only) exposes the coefficients
+directly, and Figure~\ref{fig:terms} shows the result: a lexicon of
+coalition recruitment. Bills whose summaries \emph{establish programs},
+\emph{authorize assistance}, and provide \emph{grants} and
+\emph{services} to \emph{workers} and \emph{employees} recruit
+liberal-yea coalitions; bills about \emph{rules}, \emph{regulations},
+\emph{permits}, \emph{budgets}, statutory revision (\emph{sec},
+\emph{code}, \emph{amends}), and \emph{injury} (the tort-reform
+lexicon) recruit conservative-yea ones. The map is, recognizably, the
+administrative state built versus the administrative state
+checked---estimated from votes and bill summaries alone. We reached
+this exhibit through three pre-registered face-validity corrections
+worth recording, because each is a warning to text-as-data practice:
+naive fits are dominated first by year tokens (which proxy for who
+held the majority---agenda composition, not language), then by
+procedural boilerplate from rules resolutions; only after restricting
+to substantive passage-vote summaries does bill \emph{language} itself
+speak.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.8\linewidth]{figures/direction_terms.pdf}
+\caption{Coefficients of an interpretable text model predicting which
+party's side a final-passage coalition falls on, bill-summary language
+only. The twelve largest coefficients in each direction are shown.}
+\label{fig:terms}
+\end{figure}
+
 Because the map from text to conflict structure is an estimated object,
 it can be queried with bills that do not exist. We release, alongside
 the paper, an interactive forecaster: paste the text of a hypothetical
