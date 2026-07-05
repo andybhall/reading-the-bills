@@ -1,0 +1,236 @@
+{
+  "110": {
+    "flip": true,
+    "n_test": 767883,
+    "models": {
+      "majority_question_rate": {
+        "log_loss": 0.492,
+        "accuracy": 0.7286,
+        "by_qbucket": {
+          "amendment": 0.6544,
+          "conference": 0.6015,
+          "other": 0.2962,
+          "passage": 0.3527,
+          "procedural": 0.6936,
+          "resolution": 0.1814
+        }
+      },
+      "champion": {
+        "log_loss": 0.9392,
+        "accuracy": 0.5913,
+        "by_qbucket": {
+          "amendment": 0.7831,
+          "conference": 0.6987,
+          "other": 0.2763,
+          "passage": 0.4413,
+          "procedural": 1.6995,
+          "resolution": 1.8392
+        }
+      }
+    }
+  },
+  "112": {
+    "flip": true,
+    "n_test": 666041,
+    "models": {
+      "majority_question_rate": {
+        "log_loss": 0.5945,
+        "accuracy": 0.6463,
+        "by_qbucket": {
+          "amendment": 0.6852,
+          "conference": 0.5991,
+          "other": 0.6231,
+          "passage": 0.4301,
+          "procedural": 0.7076,
+          "resolution": 0.1764
+        }
+      },
+      "champion": {
+        "log_loss": 0.7174,
+        "accuracy": 0.5525,
+        "by_qbucket": {
+          "amendment": 0.796,
+          "conference": 0.6188,
+          "other": 0.6696,
+          "passage": 0.4593,
+          "procedural": 0.8256,
+          "resolution": 0.6337
+        }
+      }
+    }
+  },
+  "113": {
+    "flip": false,
+    "n_test": 498541,
+    "models": {
+      "majority_question_rate": {
+        "log_loss": 0.5544,
+        "accuracy": 0.674,
+        "by_qbucket": {
+          "amendment": 0.6782,
+          "conference": 0.4557,
+          "other": 0.7074,
+          "passage": 0.3911,
+          "procedural": 0.6968,
+          "resolution": 0.1497
+        }
+      },
+      "champion": {
+        "log_loss": 0.6724,
+        "accuracy": 0.5969,
+        "by_qbucket": {
+          "amendment": 0.759,
+          "conference": 0.4147,
+          "other": 0.6026,
+          "passage": 0.4596,
+          "procedural": 0.7843,
+          "resolution": 0.7317
+        }
+      }
+    }
+  },
+  "115": {
+    "flip": false,
+    "n_test": 496872,
+    "models": {
+      "majority_question_rate": {
+        "log_loss": 0.5056,
+        "accuracy": 0.7351,
+        "by_qbucket": {
+          "amendment": 0.6773,
+          "conference": 0.5627,
+          "other": 0.7914,
+          "passage": 0.3499,
+          "procedural": 0.6827,
+          "resolution": 0.1042
+        }
+      },
+      "champion": {
+        "log_loss": 0.476,
+        "accuracy": 0.7519,
+        "by_qbucket": {
+          "amendment": 0.72,
+          "conference": 0.5538,
+          "other": 0.5417,
+          "passage": 0.3591,
+          "procedural": 0.3681,
+          "resolution": 0.411
+        }
+      }
+    }
+  },
+  "116": {
+    "flip": true,
+    "n_test": 396502,
+    "models": {
+      "majority_question_rate": {
+        "log_loss": 0.558,
+        "accuracy": 0.6183,
+        "by_qbucket": {
+          "amendment": 0.7471,
+          "conference": 0.5034,
+          "other": 0.6198,
+          "passage": 0.3546,
+          "procedural": 0.6929,
+          "resolution": 0.1303
+        }
+      },
+      "champion": {
+        "log_loss": 0.6537,
+        "accuracy": 0.6462,
+        "by_qbucket": {
+          "amendment": 0.7512,
+          "conference": 0.5734,
+          "other": 0.5413,
+          "passage": 0.4119,
+          "procedural": 0.8961,
+          "resolution": 0.5815
+        }
+      }
+    }
+  },
+  "117": {
+    "flip": false,
+    "n_test": 420436,
+    "models": {
+      "majority_question_rate": {
+        "log_loss": 0.4723,
+        "accuracy": 0.6838,
+        "by_qbucket": {
+          "amendment": 0.7729,
+          "other": 0.5482,
+          "passage": 0.3383,
+          "procedural": 0.6926,
+          "resolution": 0.0726
+        }
+      },
+      "champion": {
+        "log_loss": 0.5261,
+        "accuracy": 0.7213,
+        "by_qbucket": {
+          "amendment": 0.7387,
+          "other": 0.5859,
+          "passage": 0.4287,
+          "procedural": 0.5942,
+          "resolution": 0.4165
+        }
+      }
+    }
+  },
+  "118": {
+    "flip": true,
+    "n_test": 516591,
+    "models": {
+      "majority_question_rate": {
+        "log_loss": 0.6284,
+        "accuracy": 0.5307,
+        "by_qbucket": {
+          "amendment": 0.7614,
+          "other": 0.7069,
+          "passage": 0.479,
+          "procedural": 0.7016,
+          "resolution": 0.2502
+        }
+      },
+      "champion": {
+        "log_loss": 0.743,
+        "accuracy": 0.5765,
+        "by_qbucket": {
+          "amendment": 0.8376,
+          "other": 0.5168,
+          "passage": 0.4756,
+          "procedural": 0.999,
+          "resolution": 0.9028
+        }
+      }
+    }
+  },
+  "119": {
+    "flip": false,
+    "n_test": 240739,
+    "models": {
+      "majority_question_rate": {
+        "log_loss": 0.579,
+        "accuracy": 0.6267,
+        "by_qbucket": {
+          "amendment": 0.7329,
+          "other": 0.4817,
+          "passage": 0.4885,
+          "procedural": 0.7012,
+          "resolution": 0.561
+        }
+      },
+      "champion": {
+        "log_loss": 0.5989,
+        "accuracy": 0.6789,
+        "by_qbucket": {
+          "amendment": 0.843,
+          "other": 0.458,
+          "passage": 0.4594,
+          "procedural": 0.7073,
+          "resolution": 0.694
+        }
+      }
+    }
+  }
+}

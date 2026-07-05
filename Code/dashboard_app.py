@@ -111,7 +111,12 @@ def predict_bill(text: str, chamber: str, sponsor_party: str) -> dict:
     x, q = out.x.to_numpy(), np.clip(p, 1e-6, 1 - 1e-6)
     z = np.log(q / (1 - q))
     b1, b0 = np.polyfit(x, z, 1)[0], np.polyfit(x, z, 1)[1]
+    # report a cutpoint only if the slope is meaningful AND the crossing
+    # lies within the chamber (a logistic fit to near-unanimous
+    # predictions can cross 0.5 far outside the member range)
     cut = -b0 / b1 if abs(b1) > 0.05 else None
+    if cut is not None and not (x.min() <= cut <= x.max()):
+        cut = None
 
     def party_stats(pc):
         d = out[out.party_code == pc]

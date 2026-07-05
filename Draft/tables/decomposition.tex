@@ -1,0 +1,13 @@
+\begin{tabular}{lcccc}
+\toprule
+Information used & \multicolumn{2}{c}{Temporal forecast} & \multicolumn{2}{c}{Congress-out} \\
+\midrule
+Party history only & 0.466 & 76.6 & 0.693 & 57.1 \\
+Member history only & 0.459 & 76.0 & 0.693 & 57.1 \\
+Rollcall metadata only & 0.511 & 72.3 & 0.717 & 58.6 \\
+Text + metadata (no member history) & 0.464 & 77.8 & 0.741 & 64.4 \\
+Text + metadata + member history & 0.411 & 80.1 & 0.720 & 59.3 \\
++ modern encoder, deep head, calibration & 0.348 & 85.2 & 0.670 & 61.6 \\
++ ensemble (final) & 0.324 & 86.2 & 0.643 & 62.1 \\
+\bottomrule
+\end{tabular}

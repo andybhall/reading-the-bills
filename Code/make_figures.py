@@ -75,10 +75,15 @@ def f2_loyalty():
     in the complete cloud."""
     sig = pd.read_parquet(RES / "member_signals.parquet")
     recent = sig[sig.congress >= 115]
+    recent = recent.assign(w=recent.n_unity,
+                           rw=recent.loyalty_residual * recent.n_unity,
+                           xw=recent.ideal_1d * recent.n_unity)
     g = (recent.groupby(["icpsr", "bioname", "party_code", "state_abbrev"])
-         .agg(resid=("loyalty_residual", "mean"), n=("n_unity", "sum"),
-              x=("ideal_1d", "mean"))
+         .agg(rw=("rw", "sum"), xw=("xw", "sum"), n=("w", "sum"))
          .reset_index())
+    # vote-weighted means: unweighted congress-means overweight short
+    # stints (e.g. a 140-vote party-switch transition period)
+    g["resid"], g["x"] = g.rw / g.n, g.xw / g.n
     g = g[(g.n >= 100) & g.party_code.isin([100.0, 200.0])]
     g = g[~g.state_abbrev.isin(["GU", "PR", "VI", "DC", "AS", "MP"])]
 
@@ -443,6 +448,44 @@ def f10_member_gmp():
     save(fig, "member_gmp.pdf")
 
 
+# ---------------------------------------------------------------- F11
+def f11_transitions():
+    """Majority-transition study: champion transfer loss for every House
+    test congress, flips vs placebo transitions, with the by-vote-type
+    breakdown that isolates the procedural-role mechanism."""
+    r = json.loads((MEAS / "transitions.json").read_text())
+    rows = sorted(((int(c), e) for c, e in r.items()))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8.4, 3.6))
+    xs = np.arange(len(rows))
+    colors = [REP if e["flip"] else "#999999" for _, e in rows]
+    ax1.bar(xs, [e["models"]["champion"]["log_loss"] for _, e in rows],
+            color=colors)
+    ax1.scatter(xs, [e["models"]["majority_question_rate"]["log_loss"]
+                     for _, e in rows], marker="_", s=220, color="#111111",
+                label="Majority-status table")
+    ax1.set_xticks(xs)
+    ax1.set_xticklabels([str(c) for c, _ in rows])
+    ax1.set_xlabel("Test congress (red: majority flipped)")
+    ax1.set_ylabel("Test log loss")
+    ax1.set_title("Cross-congress transfer, all transitions")
+    ax1.legend(frameon=False, fontsize=8)
+
+    for qb, marker, lab in (("procedural", "o", "Procedural"),
+                            ("passage", "s", "Final passage"),
+                            ("amendment", "^", "Amendment")):
+        f = [e["models"]["champion"]["by_qbucket"].get(qb) for _, e in rows]
+        ax2.scatter([x for x, v in zip(xs, f) if v is not None],
+                    [v for v in f if v is not None], marker=marker, s=34,
+                    color=[c for c, v in zip(colors, f) if v is not None],
+                    label=lab, alpha=0.9)
+    ax2.set_xticks(xs)
+    ax2.set_xticklabels([str(c) for c, _ in rows])
+    ax2.set_xlabel("Test congress")
+    ax2.set_title("The damage is procedural, and flips cause it")
+    ax2.legend(frameon=False, fontsize=8)
+    save(fig, "transitions.pdf")
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     f1_validation()
@@ -459,6 +502,8 @@ def main():
         f10_member_gmp()
     else:
         print("skip F10 (no member_fit yet)")
+    if (MEAS / "transitions.json").exists():
+        f11_transitions()
 
 
 if __name__ == "__main__":

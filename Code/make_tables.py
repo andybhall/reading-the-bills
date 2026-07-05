@@ -248,6 +248,33 @@ def cutpoint_pred():
             rows, "lccc")
 
 
+def decomposition(lb):
+    """Signal decomposition (review r1, O4): one table, identically
+    evaluated, isolating party, member history, metadata, text, and
+    their combinations across the two forecasting regimes."""
+    rows_spec = [
+        ("party_question_rate", "Party history only"),
+        ("member_question_rate", "Member history only"),
+        ("meta_tower_8d", "Rollcall metadata only"),
+        ("text_tower_8d", "Text + metadata (no member history)"),
+        ("text_tower_mq_8d", "Text + metadata + member history"),
+        ("emb2_mlp_mq_16d_tcal", "+ modern encoder, deep head, calibration"),
+        ("blend3_mlp_tfidf_emb3_tcal", "+ ensemble (final)"),
+    ]
+    rows = []
+    for m, lab in rows_spec:
+        rows.append(" & ".join([
+            lab,
+            fmt(get(lb, m, "forecast108_119", "log_loss")),
+            pct(get(lb, m, "forecast108_119", "accuracy")),
+            fmt(get(lb, m, "congressout118", "log_loss")),
+            pct(get(lb, m, "congressout118", "accuracy"))]))
+    tabular(OUT / "decomposition.tex",
+            "Information used & \\multicolumn{2}{c}{Temporal forecast} & "
+            "\\multicolumn{2}{c}{Congress-out}",
+            rows, "lcccc")
+
+
 def prospective():
     rows = []
     for tag, f in (("v1 (emb2-MLP tower)", "prospective_report.json"),
@@ -332,11 +359,50 @@ def numbers(lb):
     lines += [
         macro("blockoutShare", pct(((cut.cutpoint >= lo) & (cut.cutpoint <= hi)).mean())),
         macro("cutLeftOfFloor", pct((cut.cutpoint < floor_med).mean())),
+        # the party-line region: cutpoints between the two party medians,
+        # where (given orientation) the parties are on opposite sides
+        macro("cutBetweenParties", pct(cut.cutpoint.between(
+            *sorted([dmed, floor_med])).mean())),
         macro("houseFloorMed", fmt(floor_med, 2)),
         macro("houseRMed", fmt(rmed, 2)),
         macro("houseDMed", fmt(dmed, 2)),
         macro("nCutHouse", f"{len(cut):,}"),
     ]
+    # amendment-join coverage denominators (review r1 #11)
+    am = pd.read_parquet(ROOT / "Modified Data" / "amendments.parquet")
+    rcs = pd.read_parquet(ROOT / "Modified Data" / "rollcalls.parquet")
+    rcs = rcs[rcs.congress >= 108].copy()
+    import sys as _sys
+    _sys.path.insert(0, str(ROOT / "Code"))
+    from models_forecast import question_bucket as _qb
+    rcs["qb"] = _qb(rcs["vote_question"])
+    amrc = rcs[rcs.qb == "amendment"].copy()
+    nodesc = amrc["vote_desc"].isna()
+    # session-offset amender join, recomputed (same code path as analysis)
+    from importlib import import_module
+    tcp = import_module("23_text_cutpoints")
+    amrc["amdt_sponsor"] = tcp.amendment_sponsors(
+        amrc.rename(columns={})).to_numpy()
+    cov = amrc["amdt_sponsor"].notna().mean()
+    filled_nodesc = int((nodesc & amrc["amdt_sponsor"].notna()).sum())
+    lines += [
+        macro("amdtTotal", f"{len(amrc):,}"),
+        macro("amdtNoDesc", f"{int(nodesc.sum()):,}"),
+        macro("amdtFilledNoDesc", f"{filled_nodesc:,}"),
+        macro("amdtSponsorCov", pct(cov)),
+    ]
+    # prospective bootstrap CI (v1 ledger, rollcall-cluster, 2000 reps)
+    led = pd.read_parquet(RES / "frozen" / "prospective_ledger.parquet")
+    rng = np.random.default_rng(42)
+    keys = list(led.groupby(["congress", "chamber", "rollnumber"]).groups.values())
+    lls = []
+    for _ in range(2000):
+        idx = np.concatenate([keys[i] for i in rng.integers(0, len(keys), len(keys))])
+        s = led.loc[idx]
+        q = np.clip(s.p_yea, 1e-12, 1 - 1e-12)
+        lls.append(float(-(s.vote * np.log(q) + (1 - s.vote) * np.log(1 - q)).mean()))
+    lines += [macro("prospLLlo", fmt(np.percentile(lls, 2.5))),
+              macro("prospLLhi", fmt(np.percentile(lls, 97.5)))]
     # Nokken-Poole convergent validity for the per-congress fits
     mem = pd.read_parquet(ROOT / "Modified Data" / "members.parquet")
     np_rs = []
@@ -359,6 +425,23 @@ def numbers(lb):
             "PAUL, Ronald", na=False), "gmp_nom"].iloc[0], 2)),
         macro("paulGMPours", fmt(mf.loc[mf.bioname.str.contains(
             "PAUL, Ronald", na=False), "gmp_ours"].iloc[0], 2)),
+    ]
+    # transition-study summary macros
+    tr = json.loads((RES / "measures" / "transitions.json").read_text())
+    def _mean(flip, bucket=None):
+        vals = []
+        for e in tr.values():
+            if e["flip"] == flip:
+                m = e["models"]["champion"]
+                vals.append(m["by_qbucket"].get(bucket) if bucket else m["log_loss"])
+        return float(np.mean([v for v in vals if v is not None]))
+    lines += [
+        macro("flipLL", fmt(_mean(True))),
+        macro("placeboLL", fmt(_mean(False))),
+        macro("flipProcLL", fmt(_mean(True, "procedural"))),
+        macro("placeboProcLL", fmt(_mean(False, "procedural"))),
+        macro("flipPassLL", fmt(_mean(True, "passage"))),
+        macro("placeboPassLL", fmt(_mean(False, "passage"))),
     ]
     cp = json.loads((RES / "measures" / "cutpoint_pred.json").read_text())["sets"]
     lines += [
@@ -387,6 +470,7 @@ def main():
     error_decomp()
     issue_topics()
     cutpoint_pred()
+    decomposition(lb)
     prospective()
     numbers(lb)
     # completeness check: no placeholder cells in any table the draft inputs
