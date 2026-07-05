@@ -257,8 +257,9 @@ of scaling research built bespoke models to rescue---Ron Paul (GMP
 Massie, Dennis Kucinich: the ends-against-the-middle and protest
 voters of \citet{duckmayr2023ends} and \citet{fowler2026protest},
 recovered here by one flexible model rather than phenomenon-specific
-likelihoods. Convergent validity holds throughout: per-congress
-positions correlate with Nokken--Poole scores
+likelihoods. Convergent validity---the discipline of checking a new measure against
+every external benchmark available \citep{shor2011ideological}---holds
+throughout: per-congress positions correlate with Nokken--Poole scores
 \citep{nokken2004congressional} at $r = \npRmin$--$\npRmax$ across
 recent chamber-congresses. Still, completion-regime performance should
 never be quoted as ``prediction.''
@@ -390,7 +391,12 @@ residuals labeled. Blue: Democrats; red: Republicans.}
 
 \subsection{Issue-specific positions}
 
-Because every rollcall carries a policy area from its bill's text
+Issue-specific structure has a distinguished lineage---appropriations
+votes scale differently from the rest of the agenda
+\citep{crespin2010dimensions}, and topic-weighted estimation recovers
+issue variation in courts and Congress
+\citep{lauderdale2014scaling}---but coverage has been the constraint.
+Because every rollcall here carries a policy area from its bill's text
 metadata, the spatial model can be re-estimated \emph{within} policy
 areas, giving each member a position on economics, defense, crime,
 health, and ten other domains---the structure a single dimension is
@@ -705,10 +711,14 @@ would survive the flip. Meanwhile the logit on frozen, career-spanning
 DW-NOMINATE scores nearly matches the deep model's transfer accuracy
 (\nomctxCongressoutAcc\% versus \champCongressoutAcc\%).
 
-For measurement practice the implications are direct. Vote-derived
-scores estimated within one majority configuration partly measure that
-configuration; comparisons of member scores across a change in control
-confound preference change with role change; and the durability of
+For measurement practice the implications are direct, and they extend
+a caution the American political development literature has pressed on
+other grounds: cross-time comparisons of vote-based scores are
+entangled with changes in what the chamber votes on
+\citep{bateman2017house}. Vote-derived scores estimated within one
+majority configuration partly measure that configuration; comparisons
+of member scores across a change in control confound preference change
+with role change; and the durability of
 career-spanning estimation---long derided as an assumption of
 implausible preference stability---looks instead like insurance against
 role contamination. For the benchmark, cross-configuration transfer is
