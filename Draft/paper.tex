@@ -70,18 +70,30 @@ measure derived from it can contain.
 
 For four decades the machinery in question has been the spatial voting
 model, and it earned its dominance: one or two dimensions classify
-around ninety percent of votes in the modern Congress. A brief
+around ninety percent of votes in the modern Congress. The past
+fifteen years of scaling research has pushed on the machinery from
+every side: legislator-specific unpredictability
+\citep{lauderdale2010unpredictable}, issue-specific dimensions
+estimated with topic-weighted votes \citep{lauderdale2014scaling,
+crespin2010dimensions}, joint models of votes and speech
+\citep{kim2018estimating}, computational estimators for massive data
+\citep{imai2016fast}, supervised learning as a measurement bridge
+\citep{bonica2018inferring}, bill and status-quo locations for testing
+theories of lawmaking \citep{peress2013estimating, richman2011parties},
+and, most recently, models built to rescue the members whom
+one-dimensional scaling visibly mis-measures---ideological extremists
+who vote with the opposite pole against the middle
+\citep{duckmayr2023ends} and majority members who cast protest votes
+against bills they prefer \citep{fowler2026protest}. A parallel
 literature at the intersection of machine learning and legislative
-studies tried to push further by reading the bills themselves
-\citep{gerrish2011predicting, gerrish2012they, kraft2016embedding,
-lauderdale2014scaling}, but it worked with the text tools of its
-era---topic models, early embeddings---and went quiet before modern
-language models existed. Today's encoders read legislative text
-incomparably better. If prediction bounds measurement, then better
-predictors should mean richer, sharper, more trustworthy measures of
-Congress. Do they? What new things can we now measure? And where does
-even the best modern predictor hit a wall---and what do the walls
-themselves teach us about the institution?
+studies tried to read the bills themselves \citep{gerrish2011predicting,
+gerrish2012they, kraft2016embedding}, but worked with the text tools of
+its era and went quiet before modern language models existed. Today's
+encoders read legislative text incomparably better, and prediction
+bounds measurement. Do better predictors deliver richer, sharper, more
+trustworthy measures of Congress? What new things can we now measure?
+And where does even the best modern predictor hit a wall---and what do
+the walls teach us about the institution?
 
 This paper answers in three movements. \emph{First, we build and
 validate the instrument} (Section~\ref{sec:instrument}). On an open
@@ -225,11 +237,43 @@ vanish across the majority flip.}
 \end{figure}
 
 Table~\ref{tab:regime} and Figure~\ref{fig:regimes} summarize the
-audit; three points matter for everything downstream. Completion is
-essentially solved (an eight-dimensional ideal-point model reaches
-\regimeAbestLL{} log loss; Appendix Table~\ref{tab:regimeA}), so
-completion-regime performance should never be quoted as
-``prediction.'' The 2011--2016 text models, re-implemented faithfully
+audit; three points matter for everything downstream. First,
+completion. We report it in the field's own statistics---correct
+classification, APRE, and geometric mean probability, the fit
+vocabulary of the NOMINATE tradition \citep{carroll2013structure};
+log loss is $-\log(\mathrm{GMP})$, so our primary metric is the
+literature's in different units. An eight-dimensional model reaches
+GMP \regimeAbestGMP{} (\regimeAbestAcc\% classification) on held-out
+votes against \regimeAnominateGMP{} for frozen DW-NOMINATE with
+estimated rollcall parameters (Appendix Table~\ref{tab:regimeA})---and
+the \emph{location} of that margin is itself a finding.
+Figure~\ref{fig:membergmp} compares the two models member by member on
+identical held-out votes. For the typical member the classical model
+is nearly unimprovable (median GMP \memberGMPmedNom{} versus
+\memberGMPmedOurs; ours is higher for \memberGMPshare\% of members);
+the large gains concentrate in precisely the members the past decade
+of scaling research built bespoke models to rescue---Ron Paul (GMP
+\paulGMPnom{} $\rightarrow$ \paulGMPours), Justin Amash, Thomas
+Massie, Dennis Kucinich: the ends-against-the-middle and protest
+voters of \citet{duckmayr2023ends} and \citet{fowler2026protest},
+recovered here by one flexible model rather than phenomenon-specific
+likelihoods. Convergent validity holds throughout: per-congress
+positions correlate with Nokken--Poole scores
+\citep{nokken2004congressional} at $r = \npRmin$--$\npRmax$ across
+recent chamber-congresses. Still, completion-regime performance should
+never be quoted as ``prediction.''
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.62\linewidth]{figures/member_gmp.pdf}
+\caption{Member-by-member geometric mean probability on identical
+held-out completion-regime votes: this paper's spatial model against
+the classical model (frozen DW-NOMINATE positions, estimated rollcall
+parameters). Members above the diagonal fit better under the richer
+model; the largest gains (labeled) are the literature's canonical hard
+cases. Blue: Democrats; red: Republicans.}
+\label{fig:membergmp}
+\end{figure} The 2011--2016 text models, re-implemented faithfully
 and given modern courtesies (Appendix Table~\ref{tab:lit}), fail under
 proper scoring: the Gerrish--Blei-style model's raw forecast log loss
 (\gbRawForecastLL) is worse than predicting the base rate---severe
@@ -423,6 +467,21 @@ anecdotally. We release the full surprise ranking as a research
 resource: a sampling frame for studying lobbying, leadership pressure,
 and the votes that end careers.
 
+Two clarifications locate this measure in the literature's lineage.
+Relative to legislator-specific variance in a one-dimensional model
+\citep{lauderdale2010unpredictable}, our unpredictability is
+\emph{residual to a far richer specification}: behavior must escape
+text, issue structure, party discipline, and the member's own detailed
+history before it registers as surprising. And relative to protest
+voting \citep{fowler2026protest}: the Squad's protest pattern is
+\emph{regular}---a rich model learns it, which is exactly why those
+members show ordinary loyalty residuals and no excess presence in our
+surprise tail, while a one-dimensional model registers them as its
+worst-fit members (Figure~\ref{fig:membergmp}). What the classical
+framework treats as measurement failure is, to a sufficiently
+expressive model, simply another behavioral signature; what remains in
+\emph{our} surprise tail is the genuinely episodic residue.
+
 \begin{figure}[t]
 \centering
 \includegraphics[width=.9\linewidth]{figures/surprises.pdf}
@@ -450,11 +509,27 @@ extremes (consensus votes that separate only the flanks).
 \centering
 \includegraphics[width=.95\linewidth]{figures/cutpoints_house118.pdf}
 \caption{The 118th House measured. Top: member positions by party
-(filled) and the distribution of rollcall cutpoints (outline). Bottom:
-cutpoints by policy area (ticks: medians). Cutpoints shown where
-discrimination is large enough for the location to be identified.}
+(filled), rollcall cutpoints (outline), and floor and party medians
+(dashed). Bottom: cutpoints by policy area (ticks: medians). Cutpoints
+shown where discrimination is large enough for the location to be
+identified.}
 \label{fig:cutpoints}
 \end{figure}
+
+Cutpoint locations relative to the chamber's pivotal actors are the
+raw material of the agenda-control literature
+\citep{richman2011parties, peress2013estimating, aldrich2014polarization},
+and the full-agenda measurement makes the standard quantities
+immediate. In the 118th House, only \blockoutShare\% of the
+\nCutHouse{} identified cutpoints fall between the floor median
+(\houseFloorMed) and the majority-party median (\houseRMed)---the
+region where a vote splits the majority party against its own
+median---while \cutLeftOfFloor\% fall to the \emph{left} of the floor
+median, where the Republican conference votes together against most
+Democrats. That asymmetry---an agenda engineered to divide the
+opposition rather than the majority---is negative agenda control
+rendered as a histogram, computed from every recorded vote of the
+congress rather than a curated subset.
 
 Text enters the measurement here: the model's text-to-parameter head is
 a learned map from legislative language to conflict structure, and its

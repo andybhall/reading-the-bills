@@ -207,17 +207,28 @@ def f3b_topic_polarization():
 def f4_cutpoints():
     rc = pd.read_parquet(MEAS / "cutpoints_house118.parquet")
     mem = pd.read_parquet(MEAS / "members_house118.parquet")
-    rc = rc[rc.identified & rc.cutpoint.between(-3.2, 3.2)]
+    rc = rc[rc.identified & rc.cutpoint.between(-4.2, 4.2)]
     fig, (ax1, ax2) = plt.subplots(
         2, 1, figsize=(7.0, 5.6), sharex=True,
         gridspec_kw={"height_ratios": [1, 1.5], "hspace": 0.12})
 
     for pc, color, lab in ((100.0, DEM, "Democrats"), (200.0, REP, "Republicans")):
         x = mem.loc[mem.party_code == pc, "x"]
-        ax1.hist(x, bins=45, range=(-3.2, 3.2), color=color, alpha=0.55,
+        ax1.hist(x, bins=55, range=(-4.2, 4.2), color=color, alpha=0.55,
                  label=lab, density=True)
-    ax1.hist(rc.cutpoint, bins=60, range=(-3.2, 3.2), histtype="step",
+    ax1.hist(rc.cutpoint, bins=70, range=(-4.2, 4.2), histtype="step",
              color="#333333", lw=1.1, density=True, label="Rollcall cutpoints")
+    # medians for the agenda-control reading (cartel-theory exhibits):
+    # cutpoints between the floor and majority medians are votes that
+    # could roll the majority party
+    for x, lab, c in ((mem.x.median(), "floor\nmedian", "#333333"),
+                      (mem.loc[mem.party_code == 100.0, "x"].median(),
+                       "D median", DEM),
+                      (mem.loc[mem.party_code == 200.0, "x"].median(),
+                       "R median", REP)):
+        ax1.axvline(x, color=c, lw=0.9, ls="--", alpha=0.8)
+        ax1.annotate(lab, (x, ax1.get_ylim()[1] * 0.86), fontsize=6.5,
+                     ha="center", color=c)
     ax1.legend(frameon=False, fontsize=8)
     ax1.set_ylabel("Density")
     ax1.set_title("Members and the bills that divide them: 118th House")
@@ -340,6 +351,22 @@ def f8_cutpoint_prediction():
     ax1.scatter(d.pred_embeddings_meta, d.cut_std, s=6, alpha=0.3,
                 color="#333333", linewidths=0)
     r = np.corrcoef(d.pred_embeddings_meta, d.cut_std)[0, 1]
+    # landmark annotations: the most discriminating passage votes with
+    # recognizable short titles among the held-out rollcalls
+    links = pd.read_parquet(ROOT / "Modified Data" / "rollcall_bills.parquet")[
+        ["congress", "chamber", "rollnumber", "bill_type", "bill_no"]]
+    bills = pd.read_parquet(ROOT / "Modified Data" / "bills.parquet")[
+        ["congress", "bill_type", "bill_no", "title"]]
+    dd = (d.merge(links, on=["congress", "chamber", "rollnumber"], how="left")
+           .merge(bills, on=["congress", "bill_type", "bill_no"], how="left"))
+    dd = dd[(dd.qbucket == "passage") & dd.title.notna()]
+    dd["short"] = dd.title.str.extract(r"([A-Z][A-Za-z ]{3,28}? Act)")[0]
+    lab = dd[dd.short.notna()].nlargest(4, "cut_std")  # right-cutting acts
+    lab = pd.concat([lab, dd[dd.short.notna()].nsmallest(2, "cut_std")])
+    for i, row in enumerate(lab.itertuples()):
+        ax1.annotate(row.short, (row.pred_embeddings_meta, row.cut_std),
+                     fontsize=6, xytext=(4, 3 if i % 2 else -8),
+                     textcoords="offset points", color="#111111")
     ax1.set_xlabel("Predicted cutpoint (text + metadata)")
     ax1.set_ylabel("Realized cutpoint")
     ax1.set_title(f"Held-out future rollcalls (r = {r:.2f})")
@@ -390,6 +417,32 @@ def f9_direction_terms():
     save(fig, "direction_terms.pdf")
 
 
+# ---------------------------------------------------------------- F10
+def f10_member_gmp():
+    """Member-by-member fit on the NOMINATE literature's own statistic:
+    each member's geometric mean probability under our champion versus
+    under the classical model (frozen DW-NOMINATE positions, estimated
+    rollcall parameters), computed on identical votes."""
+    mf = pd.read_parquet(MEAS / "member_fit.parquet")
+    mf = mf[mf.n >= 100]
+    fig, ax = plt.subplots(figsize=(5.4, 5.0))
+    ax.plot([0.2, 1], [0.2, 1], color="#bbbbbb", lw=0.8, zorder=0)
+    ax.scatter(mf.gmp_nom, mf.gmp_ours, s=8, alpha=0.4,
+               c=party_color(mf.party_code), linewidths=0)
+    lab = mf.assign(g=mf.gmp_ours - mf.gmp_nom).nlargest(8, "g")
+    for i, r in enumerate(lab.itertuples()):
+        ax.annotate(shortname(r.bioname, r.state_abbrev),
+                    (r.gmp_nom, r.gmp_ours), fontsize=6.5,
+                    xytext=(5, -2 if i % 2 else 4),
+                    textcoords="offset points")
+    share = (mf.gmp_ours > mf.gmp_nom).mean()
+    ax.set_xlabel("Held-out GMP, DW-NOMINATE-based model")
+    ax.set_ylabel("Held-out GMP, this paper's spatial model")
+    ax.set_title("Member-by-member fit on identical held-out votes\n"
+                 f"(higher for {share:.0%} of members; largest gains labeled)")
+    save(fig, "member_gmp.pdf")
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     f1_validation()
@@ -402,6 +455,10 @@ def main():
     f7_regimes()
     f8_cutpoint_prediction()
     f9_direction_terms()
+    if (MEAS / "member_fit.parquet").exists():
+        f10_member_gmp()
+    else:
+        print("skip F10 (no member_fit yet)")
 
 
 if __name__ == "__main__":

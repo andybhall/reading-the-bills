@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 
 from models_forecast import question_bucket
-from models_idealpoint import IdealPoint
+from models_idealpoint import IdealPoint, NominateLogit
 
 ROOT = Path(__file__).resolve().parent.parent
 MOD = ROOT / "Modified Data"
@@ -82,6 +82,11 @@ def surprises(panel: pd.DataFrame) -> None:
         ["congress", "chamber", "rollnumber", "vote_desc", "bill_number"]]
     out = (out.merge(mem, on=["congress", "chamber", "icpsr"], how="left")
               .merge(rc, on=["congress", "chamber", "rollnumber"], how="left"))
+    # NOTE: an in-sample member-fit comparison against NominateLogit was
+    # removed here — a regularized forecaster against a saturated
+    # in-sample scaler is apples-to-oranges. The honest member-level
+    # comparison (identical held-out cells) lives in 24_member_fit.py.
+
     # keep the full distribution's summary + the informative tail
     out = out.sort_values("vote_ll", ascending=False)
     out.head(2000).to_parquet(OUT / "surprises.parquet", index=False)

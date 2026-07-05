@@ -107,14 +107,15 @@ def regimeA(lb):
               "ideal_point_1d", "nominate_logit", "ideal_point_2d", "ideal_point_8d"]
     rows = []
     for m in models:
+        ll = get(lb, m, "regimeA_seed42", "log_loss")
         rows.append(" & ".join([
             PRETTY[m],
-            fmt(get(lb, m, "regimeA_seed42", "log_loss")),
             pct(get(lb, m, "regimeA_seed42", "accuracy")),
-            pct(get(lb, m, "regimeA_seed42", "contested_accuracy")),
-            fmt(get(lb, m, "regimeA_seed42", "apre"), 2)]))
+            fmt(get(lb, m, "regimeA_seed42", "apre"), 2),
+            fmt(np.exp(-ll), 3),  # GMP, the NOMINATE literature's statistic
+            fmt(ll)]))
     tabular(OUT / "regimeA.tex",
-            "Model & Log loss & Acc.\\ (\\%) & Contested acc.\\ (\\%) & APRE",
+            "Model & CC (\\%) & APRE & GMP & Log loss",
             rows, "lcccc")
 
 
@@ -309,6 +310,55 @@ def numbers(lb):
         macro("constantForecastLL", fmt(get(lb, "constant_rate",
                                             "forecast108_119", "log_loss"))),
         macro("forecastTestN", f"{int(get(lb, champ, 'forecast108_119', 'n')):,}"),
+    ]
+    # GMP versions of headline fits (exp(-log loss)); the field's statistic
+    lines += [
+        macro("champForecastGMP", fmt(np.exp(-get(lb, champ, "forecast108_119",
+                                                  "log_loss")), 3)),
+        macro("regimeAbestGMP", fmt(np.exp(-get(lb, "ideal_point_8d",
+                                                "regimeA_seed42", "log_loss")), 3)),
+        macro("regimeAnominateGMP", fmt(np.exp(-get(lb, "nominate_logit",
+                                                    "regimeA_seed42", "log_loss")), 3)),
+    ]
+    # agenda-control quantities: cutpoint mass between floor and majority
+    # medians in the 118th House (majority: R), per cartel-theory exhibits
+    cut = pd.read_parquet(RES / "measures" / "cutpoints_house118.parquet")
+    memb = pd.read_parquet(RES / "measures" / "members_house118.parquet")
+    cut = cut[cut.identified & cut.cutpoint.between(-4, 4)]
+    floor_med = memb.x.median()
+    rmed = memb.loc[memb.party_code == 200.0, "x"].median()
+    dmed = memb.loc[memb.party_code == 100.0, "x"].median()
+    lo, hi = sorted([floor_med, rmed])
+    lines += [
+        macro("blockoutShare", pct(((cut.cutpoint >= lo) & (cut.cutpoint <= hi)).mean())),
+        macro("cutLeftOfFloor", pct((cut.cutpoint < floor_med).mean())),
+        macro("houseFloorMed", fmt(floor_med, 2)),
+        macro("houseRMed", fmt(rmed, 2)),
+        macro("houseDMed", fmt(dmed, 2)),
+        macro("nCutHouse", f"{len(cut):,}"),
+    ]
+    # Nokken-Poole convergent validity for the per-congress fits
+    mem = pd.read_parquet(ROOT / "Modified Data" / "members.parquet")
+    np_rs = []
+    for cong, ch in [(118, "House"), (118, "Senate"), (119, "House"), (119, "Senate")]:
+        pos = pd.read_parquet(RES / "measures" / f"members_{ch.lower()}{cong}.parquet")
+        mm = mem[(mem.congress == cong) & (mem.chamber == ch)][
+            ["icpsr", "nokken_poole_dim1"]]
+        j = pos.merge(mm, on="icpsr").dropna(subset=["nokken_poole_dim1"])
+        np_rs.append(np.corrcoef(j.x, j.nokken_poole_dim1)[0, 1])
+    lines += [macro("npRmin", fmt(min(np_rs), 2)),
+              macro("npRmax", fmt(max(np_rs), 2))]
+    # member-level held-out fit summary
+    mf = pd.read_parquet(RES / "measures" / "member_fit.parquet")
+    mf = mf[mf.n >= 100]
+    lines += [
+        macro("memberGMPshare", pct((mf.gmp_ours > mf.gmp_nom).mean())),
+        macro("memberGMPmedOurs", fmt(mf.gmp_ours.median(), 3)),
+        macro("memberGMPmedNom", fmt(mf.gmp_nom.median(), 3)),
+        macro("paulGMPnom", fmt(mf.loc[mf.bioname.str.contains(
+            "PAUL, Ronald", na=False), "gmp_nom"].iloc[0], 2)),
+        macro("paulGMPours", fmt(mf.loc[mf.bioname.str.contains(
+            "PAUL, Ronald", na=False), "gmp_ours"].iloc[0], 2)),
     ]
     cp = json.loads((RES / "measures" / "cutpoint_pred.json").read_text())["sets"]
     lines += [
