@@ -485,24 +485,28 @@ with no features) and calls the coalition's direction correctly
 \dirCombo\% of the time (chance: \dirConst\%).
 
 The decomposition is as informative as the headline, and we report the
-metadata baseline at full strength: because a bill's sponsor is
-directional for passage votes (the yeas fall on the sponsor's side 82
-percent of the time) but a coin flip for amendments (we observe the
-\emph{bill's} sponsor, and amendments are frequently the other party's
-attacks on it), the metadata model includes sponsor-by-question
-interactions---without them, main effects average this structure away
-and metadata looks spuriously weak. So strengthened, metadata alone is
-formidable: it locates cutpoints nearly as well as anything
-($\mathrm{MAE} = \cutMetaMAE$; \emph{where} a vote cuts is
-substantially institutional) and calls direction at \dirMeta\%. Text
-earns its keep \emph{incrementally}: adding it improves every metric,
-most of all direction (+6 points, to \dirCombo\%) and the correlation
-of predicted with realized locations ($r = \cutMetaR \rightarrow
-\cutComboR$). Among the text's components, the bill summary carries
-the most directional signal and the vote question the most locational
-signal (Table~\ref{tab:cutpred}, bottom panel): institutions pin where
-a vote cuts, sponsorship supplies a default side, and content is what
-tells you when the default is wrong.
+metadata baseline at full strength, which took two rounds of honest
+reinforcement. A bill's sponsor is directional for passage votes (the
+yeas fall on the sponsor's side 82 percent of the time) but a coin
+flip for amendment votes, where the relevant actor is the
+\emph{amender}---frequently the other party attacking the bill. The
+final metadata model therefore carries both actors' parties (bill
+sponsor everywhere; amender's party on the roughly three-quarters of
+amendment votes recoverable from amendment records, where the
+amender-side rule alone calls direction at 77 percent),
+sponsor-by-question interactions, question type, bill category, and
+chamber. So strengthened, metadata alone is formidable: it locates
+cutpoints nearly as well as anything ($\mathrm{MAE} = \cutMetaMAE$;
+\emph{where} a vote cuts is substantially institutional) and calls
+direction at \dirMeta\%. Text still earns its keep on every metric:
+direction rises to \dirCombo\% and the correlation of predicted with
+realized locations from $r = \cutMetaR$ to $\cutComboR$. Among the
+text's components, the bill summary carries the most directional
+signal and the vote question the most locational signal
+(Table~\ref{tab:cutpred}, bottom panel). The synthesis: institutions
+pin where a vote cuts, the acting legislator's party supplies a
+default side, and content is what tells you when the default is
+wrong---and by how much.
 
 \begin{table}[t]
 \centering

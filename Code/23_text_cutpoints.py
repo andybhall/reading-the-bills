@@ -87,6 +87,41 @@ def fit_targets() -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+def amendment_sponsors(rc: pd.DataFrame) -> pd.Series:
+    """Amender's party per rollcall, via BILLSTATUS roll references.
+
+    Clerk roll numbers RESET each session while Voteview's are
+    congress-cumulative, so a session-2 reference "Roll no. 350" means
+    Voteview rollnumber 350 + (session-1 rollcall count). The E5 build
+    sidestepped this with a date-equality filter, which silently limited
+    matches to session-1 votes; here the offset is applied explicitly and
+    date equality is kept as verification. Ambiguous joins dropped."""
+    am = pd.read_parquet(MOD / "amendments.parquet")
+    am = am[(am.roll_no >= 0) & (am.action_date != "")
+            & am.sponsor_party.isin(["D", "R"])].copy()
+    am["chamber"] = am.amdt_type.map({"HAMDT": "House", "SAMDT": "Senate"})
+    rcm = pd.read_parquet(MOD / "rollcalls.parquet")[
+        ["congress", "chamber", "rollnumber", "date"]].copy()
+    rcm["year"] = pd.to_datetime(rcm.date).dt.year
+    first_year = 1787 + 2 * rcm.congress
+    s1 = (rcm[rcm.year == first_year]
+          .groupby(["congress", "chamber"])["rollnumber"].max().rename("offset"))
+    am["year"] = pd.to_datetime(am.action_date).dt.year
+    am = am.merge(s1.reset_index(), on=["congress", "chamber"], how="left")
+    am["offset"] = am["offset"].fillna(0)
+    session2 = am.year > (1787 + 2 * am.congress)
+    am["rollnumber"] = am.roll_no + np.where(session2, am.offset, 0)
+
+    key = ["congress", "chamber", "rollnumber"]
+    j = rc[key + ["date"]].copy()
+    j["vote_date"] = j.date.astype(str).str[:10]
+    j = j.merge(am[key + ["action_date", "sponsor_party"]], on=key, how="left")
+    j = j[j.action_date.isna() | (j.action_date == j.vote_date)]
+    j = j.drop_duplicates(key, keep=False)
+    return rc.merge(j[key + ["sponsor_party"]].rename(
+        columns={"sponsor_party": "amdt_sponsor"}), on=key, how="left")["amdt_sponsor"]
+
+
 def attach_features(rc: pd.DataFrame) -> pd.DataFrame:
     links = pd.read_parquet(MOD / "rollcall_bills.parquet")[
         ["congress", "chamber", "rollnumber", "vote_question",
@@ -100,6 +135,14 @@ def attach_features(rc: pd.DataFrame) -> pd.DataFrame:
             .merge(bills, on=["congress", "bill_type", "bill_no"], how="left")
             .merge(rcm, on=["congress", "chamber", "rollnumber"], how="left"))
     rc["qbucket"] = question_bucket(rc["vote_question"])
+    rc["amdt_sponsor"] = amendment_sponsors(rc).to_numpy()
+    # the acting legislator whose party orients the vote: the AMENDER on
+    # matched amendment votes, the bill sponsor otherwise
+    rc["actor_party"] = np.where(
+        (rc.qbucket == "amendment") & rc.amdt_sponsor.notna(),
+        rc.amdt_sponsor, rc.sponsor_party.fillna(""))
+    rc["amdt_matched"] = ((rc.qbucket == "amendment")
+                          & rc.amdt_sponsor.notna()).astype(float)
     q, d, s = [], [], []
     for row in rc.itertuples():
         q.append(row.vote_question if isinstance(row.vote_question, str) else "")
@@ -129,7 +172,12 @@ def meta_matrix(rc: pd.DataFrame, fit_levels=None):
         fit_levels = {"q": sorted(rc.qbucket.unique()),
                       "s": ["D", "R"], "c": sorted(rc.bill_category.fillna("none").unique())}
     Q = np.stack([(rc.qbucket == q).to_numpy(float) for q in fit_levels["q"]], 1)
+    # two distinct actors, both informative in different places: the
+    # bill's sponsor (location cue on all vote types) and the amender
+    # (direction cue on matched amendment votes; zero elsewhere)
     S = np.stack([(rc.sponsor_party.fillna("") == s).to_numpy(float)
+                  for s in fit_levels["s"]], 1)
+    A = np.stack([(rc.amdt_sponsor.fillna("") == s).to_numpy(float)
                   for s in fit_levels["s"]], 1)
     C = np.stack([(rc.bill_category.fillna("none") == c).to_numpy(float)
                   for c in fit_levels["c"]], 1)
@@ -138,7 +186,8 @@ def meta_matrix(rc: pd.DataFrame, fit_levels=None):
     # (we observe the BILL's sponsor, not the amender's party) — main
     # effects alone average that away and understate metadata
     SQ = np.hstack([S[:, [i]] * Q for i in range(S.shape[1])])
-    blocks = [Q, S, C, SQ, (rc.chamber == "Senate").to_numpy(float)[:, None]]
+    blocks = [Q, S, A, C, SQ, rc.amdt_matched.to_numpy(float)[:, None],
+              (rc.chamber == "Senate").to_numpy(float)[:, None]]
     return np.hstack(blocks), fit_levels
 
 
