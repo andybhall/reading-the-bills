@@ -38,11 +38,13 @@ reading rollcall-level text with modern language-model encoders,
 anchored on member histories, with calibrated probabilities
 (\champForecastAcc\% accuracy on strictly future votes;
 \champContestedAcc\% on contested votes; its frozen, hash-pinned
-predecessor scored \prospectiveVoneAcc\% on the \prospectiveN{} votes
-Congress cast in the three weeks \emph{after} that artifact was
-finalized, and the ensemble's own prospective ledger is running)---and
-then use it as a measurement instrument. The model's
-internals recover and extend the classical measurement canon: positions
+predecessor scored \prospectiveVoneAcc\% on the \prospectiveN{}
+individual member-vote decisions, from \prospectiveRC{} rollcalls,
+cast after that artifact's data snapshot, and the ensemble's own
+post-freeze ledger is running)---and then use it, together with
+spatial models estimated on the same benchmark, as a measurement
+toolkit. That toolkit
+recovers and extends the classical measurement canon: positions
 correlating at $r=.98$ with DW-NOMINATE, party-loyalty residuals that
 identify the chamber's mavericks by name, issue-specific positions that
 recover libertarian non-interventionism from votes alone, bill-level
@@ -50,10 +52,13 @@ cutpoints locating each rollcall on the ideological scale, and a new
 measure of \emph{out-of-character votes}. Just as informative is what
 the instrument cannot do. Amendment coalitions resist text-based
 prediction because they form around deals rather than content---a
-measurable boundary on what legislative language reveals. And no model
-survives a change in majority control: member histories actively
-mislead across the 2022 House flip, showing that much of what vote
-models measure is institutional \emph{role}, not stable preference.
+measurable boundary on what legislative language reveals. And no model we
+test carries \emph{procedural} voting across a change in majority
+control: member histories actively mislead across the 2022 House flip
+(a pattern that repeats at every majority transition since 2007 and at
+none of the placebo transitions), showing that much of what vote
+models capture on the procedural agenda is institutional \emph{role},
+not stable preference.
 Career-spanning NOMINATE scores, by contrast, nearly match the deep
 model's cross-congress accuracy---a genuine vindication of traditional
 measurement design. We release the benchmark, models, and a
@@ -143,10 +148,10 @@ which policy areas divide the parties at the center, which split one
 party internally, which pass by consensus
 (Figure~\ref{fig:cutpoints}). And because the model outputs calibrated
 probabilities for every vote, its largest errors constitute a new
-dataset of \emph{out-of-character votes}---defections the best
-available behavioral model could not see coming
-(Figure~\ref{fig:surprises})---a systematic starting point for studying
-pressure, persuasion, and idiosyncratic representation.
+dataset of \emph{out-of-character votes}---defections that remain
+incompatible with the member's full behavioral record even in
+hindsight (Figure~\ref{fig:surprises})---a systematic starting point
+for studying pressure, persuasion, and idiosyncratic representation.
 
 \emph{Third, we measure the walls} (Section~\ref{sec:limits}). Two
 boundaries survived every attempt we pre-registered against them, and
@@ -192,7 +197,10 @@ depth.
 \subsection{Data and task}
 
 We predict individual voting decisions: given everything observable
-before a rollcall, output each member's probability of voting yea. The
+before a rollcall, output each member's probability of voting yea,
+conditional on a yea or nay being recorded (abstention and absence are
+not modeled; the panel is the recorded-choice subset, not a full
+eligibility panel). The
 panel covers every yea/nay decision in the 101st through 119th
 Congresses from Voteview \citep{lewis2026voteview}---10.6 million
 decisions---with bill-side information (titles, policy areas, dated
@@ -216,14 +224,20 @@ probability member $i$ votes yea on rollcall $v$, from features dated
 strictly before $v$ (the feature-timing audit is
 Appendix~\ref{app:audit}). The \emph{spatial fits} estimate
 $P(\text{yea}) = \sigma(a_v x_i + b_v + c_i)$ per chamber-congress with
-party-sign initialization; a rollcall's \emph{cutpoint} is
-$-(b_v + \bar c)/a_v$, reported only when $|a_v| \geq 0.35$ (the
-location is unidentified for near-valence votes), and its
-\emph{direction} is $\mathrm{sign}(a_v)$. The \emph{loyalty residual}
-is $\bar y_i^{U} - \overline{\hat p}_i^{U}$ over member $i$'s
-party-unity votes $U$ (majorities of the two parties opposed), where
-the expectation comes from the spatial fit; members need at least 100
-unity votes. \emph{Issue-specific positions} refit the spatial model
+party-sign initialization; a rollcall's \emph{average-member cutpoint} is
+$-(b_v + \bar c)/a_v$ (the indifference point for a member with the
+mean intercept; individual thresholds vary with $c_i$), reported only
+when $|a_v| \geq 0.35$ on the fitted scale---the latent scale is fixed
+per chamber-congress by the estimation conventions (party-sign
+initialization, common priors), and the agenda-control quantities
+below are insensitive to moving this threshold between 0.25 and 0.50.
+A rollcall's \emph{direction} is $\mathrm{sign}(a_v)$. The \emph{loyalty residual} is computed on the party-support scale:
+with $m_{iv} = 1$ when member $i$'s party majority votes yea on unity
+vote $v$, define support $z_{iv} = \mathbf{1}\{y_{iv} = m_{iv}\}$ and
+its model expectation $q_{iv} = m_{iv}\hat p_{iv} +
+(1 - m_{iv})(1 - \hat p_{iv})$; the residual is $\bar z_i^{U} -
+\bar q_i^{U}$ over member $i$'s party-unity votes $U$ (majorities of
+the two parties opposed), with at least 100 unity votes required. \emph{Issue-specific positions} refit the spatial model
 within each policy area (fifty votes minimum per member-area) and are
 reported as deviations from the member's all-votes position after
 per-area standardization. The \emph{out-of-character score} of a
@@ -244,7 +258,9 @@ holdout} (whole rollcalls held out, interleaved in time---the
 2011--2016 literature's setting); \emph{temporal forecast} (the final
 ten percent of each congress-chamber's rollcalls---a true forecaster's
 setting); \emph{congress-out transfer} (train through the 116th
-Congress, predict the 118th, across the majority flip); and
+Congress, predict the 118th, across the majority flip---a
+skipped-congress design, with the intervening 117th held out as the
+transfer regime's validation set); and
 \emph{prospective} (hash-pinned frozen models scored only on votes that
 occur after freezing, following the logic of the reusable holdout
 problem \citep{dwork2015holdout}). Our primary metric is log loss---a
@@ -299,8 +315,8 @@ likelihoods. Convergent validity---the discipline of checking a new measure agai
 every external benchmark available \citep{shor2011ideological}---holds
 throughout: per-congress positions correlate with Nokken--Poole scores
 \citep{nokken2004congressional} at $r = \npRmin$--$\npRmax$ across
-recent chamber-congresses. Still, completion-regime performance should
-never be quoted as ``prediction.''
+recent chamber-congresses. Still, completion-regime performance should be
+quoted as held-out vote completion, never as temporal forecasting.
 
 \begin{figure}[t]
 \centering
@@ -323,7 +339,18 @@ everything within a congress by a wide margin while hitting the same
 wall as everything else across congresses (Section~\ref{sec:limits}).
 Table~\ref{tab:decomp2} decomposes the signal: each row adds one
 information source under identical evaluation, separating what member
-history, metadata, text, and modeling contribute in each regime.
+history, metadata, text, and modeling contribute in each regime. Two
+disciplines attach to the headline margins. First, paired uncertainty:
+under a rollcall-cluster bootstrap of the paired log-loss differences
+on the temporal test set, the ensemble's advantage over the two-tower
+blend is $[\pairedDeltaTwoLo, \pairedDeltaTwoHi]$ and over the single
+MiniLM tower $[\pairedDeltaOneLo, \pairedDeltaOneHi]$---both intervals
+exclude zero. Second, a leakage-conservative bound: the MiniLM tower
+uses only strictly pre-vote text (question, description, dated
+summaries), while the ensemble's TF--IDF component includes
+CRS-revisable subject metadata; readers wanting the fully conservative
+number should quote the single tower's \incForecastLL{} rather than
+the ensemble's \champForecastLL.
 
 \begin{table}[t]
 \centering
@@ -361,22 +388,26 @@ On the temporal forecast test---\forecastTestN{} future votes---the
 blend reaches \champForecastLL{} log loss, \champForecastAcc\%
 accuracy, \champContestedAcc\% contested accuracy, APRE \champAPRE.
 For certification beyond any possibility of test-set contamination, we
-are exact about which artifact certifies what. The single-tower
-\emph{predecessor} (v1) was frozen on June 12, 2026 (weights
-hash-pinned, fit through the June 9 data snapshot) and scored
-\prospectiveVoneLL{} log loss and \prospectiveVoneAcc\% accuracy on
-the \prospectiveRC{} rollcalls and \prospectiveN{} votes Congress cast
-June 10--30 (rollcall-cluster bootstrap 95\% interval for the log
-loss: \prospLLlo--\prospLLhi). That interval is wide---43 rollcalls is
-a contamination check, not a precision instrument---and its value is
-what it rules out: the development-test numbers are not inflated by
-adaptive iteration. The ensemble champion (v2) was frozen on July 3,
-2026 on the same data snapshot; scored on the same window it ties the
-predecessor on log loss with one point higher accuracy, and its
-pristine window (votes after July 3) accumulates going forward. All
-regime-audit and measurement results in this paper come from the
+are exact about which artifact certifies what. Three windows must be kept distinct. The single-tower
+\emph{predecessor} (v1) was fit through the June 9, 2026 data snapshot
+and frozen (weights hash-pinned) on June 12; on the \emph{post-snapshot}
+window (June 10--30: \prospectiveRC{} rollcalls, \prospectiveN{}
+individual member-vote decisions) it scored \prospectiveVoneLL{} log
+loss and \prospectiveVoneAcc\% accuracy (rollcall-cluster bootstrap
+95\% interval: \prospLLlo--\prospLLhi); on the strictly
+\emph{post-freeze} subset (after June 12: \postFreezeRC{} rollcalls,
+\postFreezeN{} decisions) it scores \postFreezeLL. The ensemble
+champion (v2), frozen July 3 on the same snapshot, matches the
+predecessor on this window---but the window predates v2's freeze, so
+for v2 it is a post-snapshot check only; v2's genuinely post-freeze
+ledger (votes after July 3) accumulates going forward. These intervals
+are wide---a month of rollcalls is a contamination check, not a
+precision instrument---so we state their evidential value carefully:
+they provide no indication that the development-test numbers are
+inflated by adaptive iteration, while formally excluding only gross
+contamination. All regime-audit and measurement results come from the
 ensemble; the prospective certificate quoted in the abstract belongs
-to the predecessor, with the ensemble's ledger running.
+to the predecessor.
 
 \begin{table}[t]
 \centering
@@ -441,8 +472,10 @@ Ros-Lehtinen. The residual is discipline net of the position variable
 used in the expected-support model, though it may also absorb
 preference variation---issue-specific positions, for
 instance---that the overall position does not capture; with at least
-100 unity votes per member, binomial sampling error is at most about
-five points, several times smaller than the labeled extremes.
+100 unity votes per member, the worst-case binomial \emph{standard
+error} is five points (a two-standard-error band of roughly ten), and
+clustering across repeated procedural series makes even that
+optimistic---but the labeled extremes sit far outside those bands.
 
 \begin{figure}[t]
 \centering
@@ -462,9 +495,10 @@ votes scale differently from the rest of the agenda
 \citep{crespin2010dimensions}, and topic-weighted estimation recovers
 issue variation in courts and Congress
 \citep{lauderdale2014scaling}---but coverage has been the constraint.
-Because every rollcall here carries a policy area from its bill's text
-metadata, the spatial model can be re-estimated \emph{within} policy
-areas, giving each member a position in each of the thirteen policy
+Because every legislative rollcall here carries a policy area from its
+bill's metadata (nominations, which have no bill, are coded as their
+own domain), the spatial model can be re-estimated \emph{within}
+policy areas, giving each member a position in each of the thirteen policy
 domains of Table~\ref{tab:topics}---the structure a single dimension
 is forced to average away. Coverage is broad: under the fifty-vote
 rule, between 917 and 1,562 members receive a position in each of the
@@ -545,11 +579,12 @@ it was unforeseeable at the time. (The prospective ledger produces the
 strictly forecast-based version of this measure for every vote cast
 after the freeze, and will accumulate it going forward.)
 Figure~\ref{fig:surprises} shows the decisions the model still gets
-confidently wrong even with full hindsight. These are not model noise;
-inspected, they
-are recognizable episodes---high-pressure defections, district-driven
-crossovers, protest votes---now identifiable systematically rather than
-anecdotally. We release the full surprise ranking as a research
+confidently wrong even with full hindsight. A calibrated model
+produces some confident errors by construction, so individual entries
+may be noise; the claim is distributional: the ranking is strongly
+enriched for recognizable episodes---high-pressure defections,
+district-driven crossovers, protest votes---making it a systematic
+sampling frame rather than an anecdote generator. We release the full surprise ranking as a research
 resource: a sampling frame for studying lobbying, leadership pressure,
 and the votes that end careers.
 
@@ -633,8 +668,11 @@ procedure and bargaining, not content, do the organizing.
 \subsection{One vote, walked through}
 
 Before the aggregate exhibits, one rollcall end to end---chosen from
-the genuine holdout window, so every model quantity below was computed
-without access to this vote or any later one. On December 20, 2024,
+the genuine holdout window. Two kinds of quantity appear and we label
+them: the ensemble's member probabilities are true pre-vote forecasts
+(the model saw nothing from this vote or any later one), while the
+rollcall's spatial discrimination and cutpoint are diagnostics
+estimated from the realized voting pattern. On December 20, 2024,
 the House passed H.R.~10545, the American Relief Act (roll
 no.~\ukRoll), the continuing resolution that averted a Christmas
 shutdown after the collapse of the leadership's first package---a
@@ -655,7 +693,8 @@ as a sequence of small, correctly-located surprises, not shocks.
 \caption{A worked rollcall from the holdout window: H.R.~10545,
 American Relief Act (December 20, 2024). Positions and loyalty
 residuals from the paper's measures; $\hat p$ is the frozen ensemble's
-pre-vote forecast; surprise is $-\log \hat p(\text{realized vote})$.}
+pre-vote forecast; surprise is $-\log \Pr(\text{realized vote})$,
+i.e., $-\log\hat p$ for yeas and $-\log(1-\hat p)$ for nays.}
 \label{tab:worked}
 \input{tables/worked_example.tex}
 \end{table}
@@ -671,11 +710,13 @@ the final twenty percent of each congress-chamber's rollcalls, and ask
 how well features available \emph{before} the vote predict them:
 nothing; metadata (question type, sponsor party, bill category); text
 alone (in classical and modern representations); or text and metadata
-together. On \cutTestN{} held-out future rollcalls, text plus metadata
-predicts cutpoint locations with a mean error of \cutComboMAE{}
-member-standard-deviations ($r = \cutComboR$, against \cutConstMAE{}
-with no features) and calls the coalition's direction correctly
-\dirCombo\% of the time (chance: \dirConst\%).
+together. On the \cutTestN{} held-out future rollcalls whose cutpoints are
+identified (the estimation threshold excludes near-valence votes),
+text plus metadata predicts locations with mean absolute error
+\cutComboMAE{} member-standard-deviations and $r = \cutComboR$,
+against $\mathrm{MAE} = \cutConstMAE$ and $r = 0$ with no features,
+and calls the coalition's direction correctly \dirCombo\% of the time
+(majority-direction baseline: \dirConst\%).
 
 The decomposition is as informative as the headline, and we report the
 metadata baseline at full strength, which took two rounds of honest
@@ -727,13 +768,15 @@ What in the text carries the directional signal? Fitting an
 interpretable sparse model (TF--IDF terms, final-passage votes,
 identified rollcalls, alphabetic tokens only) exposes the coefficients
 directly, and Figure~\ref{fig:terms} shows the result: a lexicon of
-coalition recruitment. Bills whose summaries \emph{establish programs},
+coalition recruitment. Summaries that \emph{establish programs},
 \emph{authorize assistance}, and provide \emph{grants} and
-\emph{services} to \emph{workers} and \emph{employees} recruit
-liberal-yea coalitions; bills about \emph{rules}, \emph{regulations},
-\emph{permits}, \emph{budgets}, statutory revision (\emph{sec},
-\emph{code}, \emph{amends}), and \emph{injury} (the tort-reform
-lexicon) recruit conservative-yea ones. The map is, recognizably, the
+\emph{services} to \emph{workers} and \emph{employees} are associated
+with liberal-yea coalitions in observed final-passage votes; summaries
+about \emph{rules}, \emph{regulations}, \emph{permits},
+\emph{budgets}, statutory revision (\emph{sec}, \emph{code},
+\emph{amends}), and \emph{injury} (the tort-reform lexicon) with
+conservative-yea ones. These are predictive associations on a
+leader-curated agenda, not causal claims about persuasion. The map is, recognizably, the
 administrative state built versus the administrative state
 checked---estimated from votes and bill summaries alone. We reached
 this exhibit through three pre-registered face-validity corrections
@@ -780,15 +823,24 @@ through recorded-vote references, looked like the obvious improvement.
 (The join filled amendment-side information for \amdtFilledNoDesc{} of
 the \amdtNoDesc{} previously text-starved amendment rollcalls, of
 \amdtTotal{} total.) Pre-registered, it failed three ways, and the
-failure is the finding. Corrupted joins, corrected joins, and
-minimal-footprint text insertions all made prediction \emph{worse} by
-similar amounts; a placebo rebuild that changed the data file without
-changing content reproduced the champion exactly, exonerating the
-pipeline. Mechanism: when a bill's amendments share the parent bill's
-text, the model assigns the series nearly identical parameters---an
-implicit pooled estimate of a correlated block. Purpose language
-replaces that pooling with per-amendment, content-driven parameters
-that predict worse than the bill's identity does. We state the
+failure is the finding: the three text variants scored \eFiveA,
+\eFiveB, and \eFiveC{} validation log loss against the same-day
+champion control's \champValCtrl, while a placebo rebuild that changed
+the data file without changing content scored \eFivePlacebo,
+reproducing the control and exonerating the pipeline. Mechanism, in
+representation terms: when a bill's amendments share the parent bill's
+text, the amendment series receives nearly identical text-side
+representations---an implicit pooled treatment of a correlated block
+of votes. Purpose language replaces that pooling with per-amendment
+representations that predict worse than the bill's identity does.
+Three hypotheses must be separated here: that amendment content is
+substantively uninformative; that the short, formulaic purpose fields
+are too thin a proxy for content (full amendment text is not in our
+data); and that amendment coalitions are organized by actor and
+procedural context. Our evidence speaks to the third---actor identity
+alone moves direction accuracy from a coin flip to 77 percent---and
+rules out only the usefulness of purpose fields, not of amendment
+content in some richer representation. We state the
 boundary precisely rather than expansively: \emph{short amendment
 purpose text adds nothing once bill identity and procedural context
 are modeled}---while actor identity adds a great deal (the amender's
@@ -857,7 +909,12 @@ identifiable reason---within a congress, member history is strictly
 more informative, so the model never learns to use the features that
 would survive the flip. Meanwhile the logit on frozen, career-spanning
 DW-NOMINATE scores nearly matches the deep model's transfer accuracy
-(\nomctxCongressoutAcc\% versus \champCongressoutAcc\%).
+(\nomctxCongressoutAcc\% versus \champCongressoutAcc\%). One
+information-set caveat keeps that comparison honest: DW-NOMINATE
+scores are estimated from members' full careers \emph{including} the
+held-out congress, so this is a retrospective measurement comparison,
+not a same-information forecast---the durability it demonstrates
+belongs to the career-spanning design, not to a deployable forecaster.
 
 For measurement practice the implications are direct, and they extend
 a caution the American political development literature has pressed on
@@ -878,7 +935,8 @@ under pre-registration, solves it.
 Better prediction has made Congress more measurable: positions that
 match the classical canon, loyalty separated from ideology, issue
 positions recovered from votes alone, an agenda mapped bill by bill,
-and a systematic catalog of the votes no model saw coming. It has also
+and a systematic catalog of members' most out-of-character recorded
+votes. It has also
 made the limits measurable, and they are not incidental: legislative
 language organizes some coalitions and not others, and a large share of
 observed voting behavior belongs to institutional role rather than to
@@ -920,6 +978,41 @@ regime.}
 \input{tables/ablation.tex}
 \end{table}
 
+\section{Measurement Provenance}
+\label{app:provenance}
+
+Which estimator produces each reported quantity, on what data:
+
+\begin{center}
+{\small
+\begin{tabular}{lllll}
+\toprule
+Quantity & Estimator & Data & Text? & Timing \\
+\midrule
+Vote forecasts & frozen ensemble & train window & yes & pre-vote \\
+Out-of-character scores & frozen ensemble & full record & yes & in-sample \\
+Worked-example $\hat p$ & frozen ensemble & pre-vote only & yes & forecast \\
+Member positions & 1D spatial fit & all votes & no & in-sample \\
+Loyalty residuals & 1D spatial fit & unity votes & no & in-sample \\
+Issue positions & per-area spatial fits & area votes & area labels & in-sample \\
+Cutpoints/directions & per-cong.\ spatial fits & realized votes & no & post-vote \\
+Cutpoint \emph{predictions} & ridge/logit on text & train window & yes & pre-vote \\
+\bottomrule
+\end{tabular}}
+\end{center}
+
+The ensemble is the forecasting instrument and the fit standard; the
+spatial fits are conventional estimators run on the same benchmark.
+The abstract's claims are worded accordingly. A remark makes the
+informational-bound framing precise: if two member-rollcall states
+induce the same conditional distribution of votes given the available
+information, no measure computed from that information can distinguish
+them---predictive sufficiency bounds what any derived measure can
+resolve. The repository's synthetic suite demonstrates the
+constructive direction: planted structures (direction-revealing text,
+majority-role regimes, within-bill persistence) are recovered exactly
+by the models whose held-out scores improve, and not by the others.
+
 \section{Feature Timing and Text Coverage}
 \label{app:audit}
 
@@ -946,12 +1039,20 @@ amendment-side information through the records join
 \section{The Interactive Forecaster}
 \label{app:dashboard}
 
-The dashboard wraps the frozen champion's MiniLM component tower. (An
-earlier draft claimed the blend's TF--IDF component \emph{could not}
-run on a single pasted bill; that was wrong---frozen idf weights
-transform new documents fine. The component is omitted as an
-engineering simplification, justified by its small blend weight of
-0.12.)
+The dashboard is a single-tower approximation of the frozen champion,
+not the champion itself: it wraps the blend's MiniLM component tower
+and omits the other two components as an engineering simplification.
+(An earlier draft claimed the TF--IDF component \emph{could not} run
+on a single pasted bill; that was wrong---frozen idf weights transform
+new documents fine.) Near decision thresholds the omitted components
+(combined blend weight 0.53 against MiniLM's 0.57 on the logit scale)
+can move a displayed side; forecasts near $0.5$ should be read
+accordingly, and the full-blend replication path ships with the
+repository. The cutpoint shown is from a logistic fit of the
+\emph{predicted probabilities} (as fractional responses, not
+thresholded votes) on member positions:
+$\operatorname{logit}(\hat p_i) = \alpha + \beta x_i$, cutpoint
+$x^{*} = -\alpha/\beta$.
 Pasted text is assembled into the training text template and embedded
 with the training encoder; a synthetic bill record carries the
 user-specified sponsoring party through the same features used in
@@ -972,6 +1073,30 @@ forecast with a center-left cutpoint. Off-agenda hypotheticals trigger
 the extrapolation flag described in the text. The service is a single
 CPU process suitable for a small container host; deployment
 configuration accompanies the repository.
+
+\section{Model Specification}
+\label{app:spec}
+
+The champion is a logistic blend (weights fit on the temporal internal
+development slice) of three two-tower models sharing one architecture:
+member embedding $x_i \in \mathbb{R}^{16}$ and intercept $c_i$;
+rollcall parameters $a_v \in \mathbb{R}^{16}, b_v$ amortized from
+rollcall features $\phi(v)$ by a two-layer MLP (width 128, ReLU);
+auxiliary logit terms for sponsor-party alignment and the logit of the
+member-by-question-bucket empirical training rate; scalar
+temperature-and-bias calibration on the development slice. The towers
+differ in $\phi$: (1) MiniLM (all-MiniLM-L6-v2, frozen, 384d) sentence
+embeddings of the rollcall text template (question, description,
+latest pre-vote summary; 1,500 characters) plus question/category/
+sponsor indicators; (2) the same plus TF--IDF (30k features, bigrams,
+SVD-128) of title/policy/subject metadata; (3) as (1) with
+Qwen3-Embedding-0.6B (1,024d, 6,000 characters). Training: AdamW
+(lr .02, weight decay $10^{-4}$), batch $2^{17}$, early stopping on
+the temporal development slice (last 5\% of training rollcalls by
+date). Blend weights 0.57/0.12/0.42 (logit scale). One pipeline
+command regenerates every table from raw Voteview and BILLSTATUS
+files; total compute for the headline table is under two GPU-hours on
+a laptop-class accelerator.
 
 \section{The Experiment Ledger}
 \label{app:ledger}

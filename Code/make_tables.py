@@ -134,8 +134,8 @@ def litrace(lb):
             fmt(get(lb, m, "randomrc108_119", "log_loss")),
             fmt(get(lb, m, "randomrc108_119", "auc"))]))
     tabular(OUT / "litrace.tex",
-            "Model & \\multicolumn{3}{c}{Forecast: LL / AUC / contested acc.} & "
-            "\\multicolumn{2}{c}{Random rollcall: LL / AUC}",
+            "Model & Fcst.\\ LL & Fcst.\\ AUC & Fcst.\\ cont.\\ acc.\\ (\\%) & "
+            "Rand.\\ LL & Rand.\\ AUC",
             rows, "lccccc")
 
 
@@ -403,6 +403,67 @@ def numbers(lb):
         lls.append(float(-(s.vote * np.log(q) + (1 - s.vote) * np.log(1 - q)).mean()))
     lines += [macro("prospLLlo", fmt(np.percentile(lls, 2.5))),
               macro("prospLLhi", fmt(np.percentile(lls, 97.5)))]
+    # post-FREEZE subset for v1 (freeze June 12; snapshot June 9): r2 #3
+    pf = led[pd.to_datetime(led.date) > "2026-06-12"]
+    qpf = np.clip(pf.p_yea, 1e-12, 1 - 1e-12)
+    llpf = float(-(pf.vote * np.log(qpf) + (1 - pf.vote) * np.log(1 - qpf)).mean())
+    lines += [
+        macro("postFreezeLL", fmt(llpf)),
+        macro("postFreezeN", f"{len(pf):,}"),
+        macro("postFreezeRC", f"{pf.groupby(['congress','chamber','rollnumber']).ngroups}"),
+    ]
+    # identification-threshold sensitivity for agenda shares (r2 O8/D1)
+    cutraw = pd.read_parquet(RES / "measures" / "cutpoints_house118.parquet")
+    cutraw = cutraw[cutraw.cutpoint.between(-4.2, 4.2)]
+    for thr, tag in ((0.25, "Lo"), (0.50, "Hi")):
+        cc = cutraw[cutraw.a.abs() >= thr]
+        lines += [macro(f"cutBetweenParties{tag}", pct(cc.cutpoint.between(
+            *sorted([dmed, floor_med])).mean()))]
+    cpass = cutraw[cutraw.identified & (cutraw.qbucket == "passage")]
+    lines += [macro("cutBetweenPartiesPassage", pct(cpass.cutpoint.between(
+        *sorted([dmed, floor_med])).mean()))]
+    # amendment-experiment deltas (r2 #10): forecast val rows from ledgered runs
+    for name, mac in (("emb4_mlp_mq_16d_tcal", "amdtSwapLL"),):
+        pass  # values pulled below from full history, not canonical dedup
+    hist = pd.read_csv(RES / "leaderboard.csv")
+    hv = hist[(hist.split == "forecast108_119") & (hist.eval_set == "val")]
+    e5 = hv[hv.model == "emb4_mlp_mq_16d_tcal"].log_loss.tolist()
+    if len(e5) >= 3:
+        lines += [macro("eFiveA", fmt(e5[0])), macro("eFiveB", fmt(e5[1])),
+                  macro("eFiveC", fmt(e5[2]))]
+    champ_ctrl = hv[hv.model == "emb2_mlp_mq_16d_tcal"].log_loss
+    placebo = hv[hv.model == "emb_placebo_mlp_mq_16d_tcal"].log_loss
+    lines += [macro("eFivePlacebo", fmt(placebo.iloc[-1])),
+              macro("champValCtrl", fmt(champ_ctrl.iloc[-1]))]
+    # paired rollcall-cluster bootstrap for headline forecast margins (r2 O9)
+    pr = {m: pd.read_parquet(RES / "preds" / f"forecast108_119_{m}.parquet")
+          for m in ("blend3_mlp_tfidf_emb3_tcal", "blend_mlp_tfidf_tcal",
+                    "emb2_mlp_mq_16d_tcal")}
+    base = pr["blend3_mlp_tfidf_emb3_tcal"].sort_values(
+        ["congress", "chamber", "rollnumber", "icpsr"]).reset_index(drop=True)
+    rckey = base.groupby(["congress", "chamber", "rollnumber"]).ngroup().to_numpy()
+    def _ll(p, y):
+        q = np.clip(p, 1e-12, 1 - 1e-12)
+        return -(y * np.log(q) + (1 - y) * np.log(1 - q))
+    y = base.vote.to_numpy()
+    ll3 = _ll(base.p_yea.to_numpy(), y)
+    diffs = {}
+    for m, tag in (("blend_mlp_tfidf_tcal", "Two"), ("emb2_mlp_mq_16d_tcal", "One")):
+        o = pr[m].sort_values(["congress", "chamber", "rollnumber",
+                               "icpsr"]).reset_index(drop=True)
+        diffs[tag] = _ll(o.p_yea.to_numpy(), y) - ll3
+    rng2 = np.random.default_rng(7)
+    ngroups = rckey.max() + 1
+    idx_by_g = pd.Series(np.arange(len(y))).groupby(rckey).apply(np.array)
+    for tag, dvec in diffs.items():
+        gsum = pd.Series(dvec).groupby(rckey).sum().to_numpy()
+        gn = pd.Series(dvec).groupby(rckey).size().to_numpy()
+        boots = []
+        for _ in range(2000):
+            pick = rng2.integers(0, ngroups, ngroups)
+            boots.append(gsum[pick].sum() / gn[pick].sum())
+        lines += [macro(f"pairedDelta{tag}Lo", fmt(np.percentile(boots, 2.5))),
+                  macro(f"pairedDelta{tag}Hi", fmt(np.percentile(boots, 97.5)))]
     # Nokken-Poole convergent validity for the per-congress fits
     mem = pd.read_parquet(ROOT / "Modified Data" / "members.parquet")
     np_rs = []
