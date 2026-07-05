@@ -722,3 +722,11 @@ REGISTRY["emb_placebo_mlp_mq_16d_tcal"] = lambda: TextTower(
     name="emb_placebo_mlp_mq_16d_tcal")  # control: byte-copy of v2 under a
 # different filename — isolates file/code-path effects from text content
 # (E5 family regressions were insensitive to content; diagnosed 2026-07-03)
+
+
+REGISTRY["notext_mq_16d_tcal"] = lambda: TextTower(
+    k=16, use_text=False, use_emb=False, mq_offset=True, calibrate=True,
+    mlp_head=True, es_mode="temporal",
+    name="notext_mq_16d_tcal")  # champion architecture minus ALL text:
+# metadata + member history only — the counterfactual for "what does
+# reading the bill add" (P5v6 protest-detection comparison)

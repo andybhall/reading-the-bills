@@ -486,6 +486,47 @@ def f11_transitions():
     save(fig, "transitions.pdf")
 
 
+# ---------------------------------------------------------------- F12
+def f12_protest():
+    """The killer exhibit for point 2: one storied majority-splitting
+    vote (H.R. 10545, the shutdown-averting American Relief Act,
+    Dec 20 2024, holdout window), predicted twice by the same
+    architecture — once without reading the bill, once reading it.
+    The no-text model cannot see the flank revolt; the text model
+    prices it member by member."""
+    mem = pd.read_parquet(MEAS / "members_house118.parquet")
+    names = mem[["icpsr", "x", "bioname", "state_abbrev", "party_code"]]
+    panels = [("notext_mq_16d_tcal", "Without reading the bill"),
+              ("blend3_mlp_tfidf_emb3_tcal", "Reading the bill")]
+    fig, axes = plt.subplots(1, 2, figsize=(8.6, 3.9), sharey=True)
+    for ax, (model, title) in zip(axes, panels):
+        p = pd.read_parquet(RES / "preds" / f"forecast108_119_{model}.parquet")
+        d = p[(p.congress == 118) & (p.chamber == "House")
+              & (p.rollnumber == 1235)].merge(names, on="icpsr")
+        yea, nay = d[d.vote == 1], d[d.vote == 0]
+        ax.scatter(yea.x, yea.p_yea, s=10, alpha=0.45,
+                   c=party_color(yea.party_code), linewidths=0,
+                   label="voted yea")
+        ax.scatter(nay.x, nay.p_yea, s=42, marker="x", lw=1.4,
+                   color="#111111", label="voted nay")
+        ax.axhline(0.5, color="#bbbbbb", lw=0.7)
+        ax.set_xlabel("Member ideal point (liberal $\\to$ conservative)")
+        ax.set_title(title)
+        if model.startswith("blend3"):
+            lab = d[d.vote == 0].nsmallest(5, "p_yea")
+            for i, r in enumerate(lab.itertuples()):
+                ax.annotate(shortname(r.bioname, r.state_abbrev),
+                            (r.x, r.p_yea), fontsize=6.5,
+                            xytext=(4, -9 - 4 * (i % 2)),
+                            textcoords="offset points")
+    axes[0].set_ylabel("Predicted P(yea), pre-vote")
+    axes[0].legend(frameon=False, fontsize=8, loc="lower left")
+    fig.suptitle("One vote, two models: the American Relief Act revolt "
+                 "(December 2024, holdout window)", fontweight="bold", y=1.03)
+    fig.tight_layout()
+    save(fig, "protest_detection.pdf")
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     f1_validation()
@@ -504,6 +545,8 @@ def main():
         print("skip F10 (no member_fit yet)")
     if (MEAS / "transitions.json").exists():
         f11_transitions()
+    if (RES / "preds" / "forecast108_119_notext_mq_16d_tcal.parquet").exists():
+        f12_protest()
 
 
 if __name__ == "__main__":

@@ -504,6 +504,16 @@ def numbers(lb):
         macro("flipPassLL", fmt(_mean(True, "passage"))),
         macro("placeboPassLL", fmt(_mean(False, "passage"))),
     ]
+    # protest-detection comparison (P5v6 point 2)
+    pdj = json.loads((RES / "measures" / "protest_detection.json").read_text())
+    lines += [
+        macro("protAUCtext", fmt(pdj["blend3_mlp_tfidf_emb3_tcal"]["auc_within_rollcall"], 2)),
+        macro("protAUCnotext", fmt(pdj["notext_mq_16d_tcal"]["auc_within_rollcall"], 2)),
+        macro("protN", f"{pdj['blend3_mlp_tfidf_emb3_tcal']['n_defections']:,}"),
+        macro("protRC", f"{pdj['blend3_mlp_tfidf_emb3_tcal']['n_rollcalls_3plus']}"),
+        macro("notextForecastLL", fmt(get(lb, "notext_mq_16d_tcal",
+                                          "forecast108_119", "log_loss"))),
+    ]
     cp = json.loads((RES / "measures" / "cutpoint_pred.json").read_text())["sets"]
     lines += [
         macro("cutComboMAE", fmt(cp["embeddings_meta"]["cut_mae"], 2)),

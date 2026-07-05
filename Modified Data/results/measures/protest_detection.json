@@ -1,0 +1,16 @@
+{
+  "blend3_mlp_tfidf_emb3_tcal": {
+    "n_member_votes": 280178,
+    "n_defections": 11993,
+    "auc_pooled": 0.79,
+    "auc_within_rollcall": 0.797,
+    "n_rollcalls_3plus": 517
+  },
+  "notext_mq_16d_tcal": {
+    "n_member_votes": 280178,
+    "n_defections": 11993,
+    "auc_pooled": 0.736,
+    "auc_within_rollcall": 0.754,
+    "n_rollcalls_3plus": 517
+  }
+}
