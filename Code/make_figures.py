@@ -492,13 +492,18 @@ def f10_member_gmp():
                     (r.ccn, r.cco), fontsize=6.5,
                     xytext=(5, -2 if i % 2 else 4),
                     textcoords="offset points")
-    share = (mf.err_ours < mf.err_nom).mean()
+    # annotation leads with the ceiling effect + the concentrated gains,
+    # not the members-improved share (misread as barely-better-than-half)
+    med = float(100 * (1 - mf.err_nom.median()))
+    gains = 100 * (lab.err_nom - lab.err_ours)
     ax.set_xlabel("Held-out votes correctly classified (%), "
                   "DW-NOMINATE-based model")
     ax.set_ylabel("Held-out votes correctly classified (%), "
                   "this paper's spatial model")
-    ax.annotate(f"higher under this model for {share:.0%} of members",
-                (0.05, 0.95), xycoords="axes fraction", fontsize=9)
+    ax.annotate(f"typical member: $\\approx${med:.0f}% correct under "
+                "both models\nlabeled hard cases gain "
+                f"{gains.min():.0f}–{gains.max():.0f} points",
+                (0.04, 0.93), xycoords="axes fraction", fontsize=9)
     ax.set_xlim(55, 100.5)
     ax.set_ylim(55, 100.5)
     save(fig, "member_cc.pdf")
@@ -660,6 +665,74 @@ def f14_defector_capture():
     save(fig, "defector_capture.pdf")
 
 
+def f15_text_horserace():
+    """The clean text-predictor horse race (short-paper request): held-out
+    temporal-forecast log loss for the no-text baselines, the reimplemented
+    2011-2016 text architectures, and this paper's models, grouped, with
+    the member-history count table marked as the bar the earlier text
+    literature never cleared. Numbers come from the same canonical
+    leaderboard rows as the paper macros."""
+    from make_tables import canonical, get
+    lb = canonical(pd.read_csv(RES / "leaderboard.csv"))
+
+    groups = [
+        ("No text", "#8a8a8a", [
+            ("constant_rate", "Constant rate"),
+            ("nominate_context_logit", "DW-NOMINATE + metadata"),
+            ("party_question_rate", "Party $\\times$ question rates"),
+            ("member_question_rate", "Member $\\times$ question rates"),
+            ("notext_mq_16d_tcal", "This architecture, text deleted"),
+        ]),
+        ("2011–2016 text models, reimplemented", REP, [
+            ("gb_spatial_tfidf", "Gerrish–Blei-style (as published)"),
+            ("gb_spatial_tfidf_tcal", "Gerrish–Blei-style + calibration"),
+            ("gb_spatial_emb2_tcal", "Gerrish–Blei-style + modern embeddings"),
+            ("kraft_bilinear_16d", "Kraft-style bilinear + modern embeddings"),
+        ]),
+        ("This paper", "#111111", [
+            ("emb2_mlp_mq_16d_tcal", "Single tower (leakage-clean)"),
+            ("blend3_mlp_tfidf_emb3_tcal", "Three-tower ensemble"),
+        ]),
+    ]
+    rows = []
+    for gname, color, members in groups:
+        for m, label in members:
+            rows.append((gname, color, label,
+                         float(get(lb, m, "forecast108_119", "log_loss"))))
+    bar = float(get(lb, "member_question_rate", "forecast108_119",
+                    "log_loss"))
+
+    fig, ax = plt.subplots(figsize=(7.6, 4.6))
+    y = 0
+    ypos, seen = [], set()
+    for gname, color, label, ll in rows:
+        if gname not in seen:           # group header line
+            seen.add(gname)
+            y -= 1
+            ax.text(0.255, y, gname, fontsize=9, style="italic",
+                    color=color, va="center")
+        y -= 1
+        ax.plot([0.25, ll], [y, y], color="#dddddd", lw=0.8, zorder=1)
+        ax.scatter([ll], [y], s=52, color=color, zorder=3)
+        ax.text(ll + 0.012, y, f"{ll:.3f}", fontsize=8, va="center")
+        ax.text(0.245, y, label, fontsize=8.5, va="center", ha="right")
+        ypos.append(y)
+    ax.axvline(bar, color="#8a8a8a", lw=1.0, ls="--", zorder=2)
+    ax.text(bar, max(ypos) + 1.6,
+            "member-history table:\nthe bar the 2011–2016\n"
+            "text models never cleared",
+            fontsize=7.5, ha="center", va="bottom", color="#555555")
+    ax.set_xlim(0.24, 0.90)
+    ax.set_ylim(min(ypos) - 1, max(ypos) + 4.5)
+    ax.set_yticks([])
+    ax.set_xlabel("Held-out log loss, temporal forecast "
+                  "(lower is better)")
+    for s in ("left", "top", "right"):
+        ax.spines[s].set_visible(False)
+    fig.tight_layout()
+    save(fig, "text_horserace.pdf")
+
+
 def f13_revolt_risk():
     """A pre-vote measure of party stress (review r4, downstream use):
     the champion's predicted majority-defection share for every
@@ -738,6 +811,8 @@ def main():
         f12_protest()
         f13_revolt_risk()
         f14_defector_capture()
+    if (RES / "leaderboard.csv").exists():
+        f15_text_horserace()
 
 
 if __name__ == "__main__":

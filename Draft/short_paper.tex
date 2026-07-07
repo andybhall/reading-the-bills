@@ -138,9 +138,9 @@ rollcall parameters on topic models, and \citet{kraft2016embedding}
 learned bilinear interactions between member embeddings and word
 vectors. That program stalled---reimplemented on this benchmark and
 evaluated under proper scoring, neither approach improves on a simple
-table of member voting rates (Table~\ref{tab:regime})---and it stalled,
-I argue, for two reasons: the encoders of 2011--2016 could not read
-legislative language well, and no evaluation discipline separated
+table of member voting rates (Figure~\ref{fig:horserace})---and it
+stalled, I argue, for two reasons: the encoders of 2011--2016 could not
+read legislative language well, and no evaluation discipline separated
 genuine forecasting from in-sample curve fitting.
 
 This paper's contribution is threefold. I supply the missing
@@ -324,29 +324,52 @@ tested and rejected), and the evaluation protocol.
 
 \subsection{The forecasting horse race}
 
-Table~\ref{tab:regime} reports the temporal-forecast comparison: every
-model predicts the final 10\% of each congress-chamber's rollcalls from
-the preceding 90\%. The blend reaches \champForecastLL{} log loss
+Figure~\ref{fig:horserace} is the horse race: held-out log loss on the
+temporal forecast for three families of models, each predicting the
+final 10\% of every congress-chamber's rollcalls from the preceding
+90\%. The dashed line marks the member-history count table
+(\memberqForecastLL{} log loss), and the figure's middle panel is the
+quantitative sense in which the earlier text program stalled: every
+reimplemented 2011--2016 architecture lands to the \emph{right} of that
+line---the Gerrish--Blei-style model at \gbRawForecastLL{} as published
+and \gbTcalForecastLL{} with calibration added, the Kraft-style
+bilinear at \kraftForecastLL{} even with modern embeddings---so a
+researcher in 2016 armed with those tools did better ignoring text
+entirely. This paper's models land far to the left: the leakage-clean
+single tower at \incForecastLL{} and the ensemble at \champForecastLL{}
 (\champForecastAcc\% accuracy, \champContestedAcc\% on contested votes,
-APRE \champAPRE) on \forecastTestN{} future votes; the leakage-clean
-single tower reaches \incForecastLL. The member-history count table, at
-\memberqForecastLL, beats every 2011--2016 text architecture, which is
-the quantitative sense in which the earlier program stalled. The paired
-bootstrap margin of the blend over its strongest component,
+APRE \champAPRE, on \forecastTestN{} future votes). The paired
+bootstrap margin of the ensemble over its own strongest component,
 $[\pairedDeltaOneLo, \pairedDeltaOneHi]$ log loss, is small; the margin
 over the no-text counterpart, \notextForecastLL{} to \champForecastLL,
 is not. Predicted probabilities are usable as probabilities: expected
 calibration error is \eceChamp{} (Brier \brierChamp) against
 \eceNotext{} without text.
 
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=.92\linewidth]{figures/text_horserace.pdf}
+\caption{The text-predictor horse race. Held-out log loss on the
+temporal forecast (final 10\% of each congress-chamber's rollcalls,
+108th--119th Congresses; lower is better) for no-text baselines (gray),
+the reimplemented 2011--2016 text architectures (red), and this paper's
+models (black). The dashed line marks the member-history count table;
+no earlier text model clears it, and both of this paper's models clear
+it by a wide margin. All models are evaluated on identical cells.}
+\label{fig:horserace}
+\end{figure}
+
+Table~\ref{tab:regime} decomposes the gain by information set, from
+party history alone to the full ensemble, and carries the congress-out
+transfer panel that Section~\ref{sec:limits} returns to.
+
 \begin{table}[tbp]
 \centering
 \begin{threeparttable}
-\caption{Temporal-forecast comparison. Each model predicts the final
-10\% of each congress-chamber's rollcalls (108th--119th Congresses)
-from the preceding 90\%; identical evaluation cells throughout. The
-right panel reports transfer to a fully held-out congress
-(Section~\ref{sec:limits}).}
+\caption{Information decomposition of the forecast. Each row adds an
+information source; entries are held-out log loss and accuracy on
+identical evaluation cells. The right panel reports transfer to a fully
+held-out congress (Section~\ref{sec:limits}).}
 \label{tab:regime}
 \input{tables/decomposition.tex}
 \end{threeparttable}
