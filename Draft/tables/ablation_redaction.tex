@@ -1,0 +1,13 @@
+\begin{tabular}{lccc}
+\toprule
+Text given to the frozen model & Log loss & $\Delta$ & Defection AUC \\
+\midrule
+Original text & 0.328 &  & 0.784 \\
+Bill summary removed & 0.351 & +0.023 & 0.811 \\
+Vote question removed & 0.383 & +0.055 & 0.766 \\
+Titles replaced by generic language & 0.340 & +0.012 & 0.768 \\
+Proper nouns masked & 0.339 & +0.011 & 0.779 \\
+Digits removed & 0.328 & +0.000 & 0.787 \\
+Text from another bill, same policy area & 0.392 & +0.064 & 0.777 \\
+\bottomrule
+\end{tabular}

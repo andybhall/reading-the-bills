@@ -29,3 +29,12 @@ Draft/*.blg
 Draft/*.log
 Draft/*.out
 Draft/paper.pdf
+
+# additional TeX build artifacts (figures/ and tables/ ARE tracked)
+Draft/*.toc
+Draft/short_paper.pdf
+Draft/technical_memo.pdf
+Draft/paper_for_review.*
+
+# vercel local project link
+webapp_vercel/.vercel/

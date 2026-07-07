@@ -49,10 +49,16 @@ def auc(y, s):
     return float((r[y == 1].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
 
 
+MODELS = (
+    "blend3_mlp_tfidf_emb3_tcal",   # champion ensemble
+    "emb2_mlp_mq_16d_tcal",         # leakage-clean single MiniLM tower
+    "notext_mq_16d_tcal",           # no-text counterfactual
+)
+
+
 def main():
     res = {}
-    frames = {}
-    for model in ("blend3_mlp_tfidf_emb3_tcal", "notext_mq_16d_tcal"):
+    for model in MODELS:
         d = load(model)
         d = d[d.qb.isin(["passage", "resolution", "cloture"])]
         d = d[d.party_code.isin([100.0, 200.0])]
@@ -63,19 +69,33 @@ def main():
         d = d[d.party_rate >= 0.5]          # member's party majority is yea
         d["defect"] = (d.vote == 0).astype(int)
         d["score"] = 1 - d.p_yea            # predicted defection prob
-        frames[model] = d
         res[model] = {
             "n_member_votes": int(len(d)),
             "n_defections": int(d.defect.sum()),
             "auc_pooled": round(auc(d.defect.to_numpy(), d.score.to_numpy()), 3),
         }
-        # within-rollcall AUC (ranking members on each vote), averaged over
-        # rollcalls with at least 3 defectors
-        g = [auc(x.defect.to_numpy(), x.score.to_numpy())
-             for _, x in d.groupby(["congress", "chamber", "rollnumber"])
-             if x.defect.sum() >= 3]
-        res[model]["auc_within_rollcall"] = round(float(np.nanmean(g)), 3)
-        res[model]["n_rollcalls_3plus"] = int(np.sum(~np.isnan(g)))
+        # within-rollcall AUC (ranking members on each vote), averaged with
+        # equal weight over rollcalls; primary subset >= 3 defectors, with
+        # the all-positive-defection subset reported alongside (review r3
+        # comment 11), plus per-chamber versions of the primary statistic
+        groups = {(k, len(x), int(x.defect.sum()), k[1]):
+                  auc(x.defect.to_numpy(), x.score.to_numpy())
+                  for k, x in d.groupby(["congress", "chamber", "rollnumber"])}
+        for tag, minim in (("3plus", 3), ("1plus", 1)):
+            g = [v for (k, n, nd, ch), v in groups.items() if nd >= minim]
+            res[model][f"auc_within_rollcall_{tag}"] = round(
+                float(np.nanmean(g)), 3)
+            res[model][f"n_rollcalls_{tag}"] = int(np.sum(~np.isnan(g)))
+        for chamber in ("House", "Senate"):
+            g = [v for (k, n, nd, ch), v in groups.items()
+                 if nd >= 3 and ch == chamber]
+            res[model][f"auc_within_{chamber}"] = round(
+                float(np.nanmean(g)), 3)
+            res[model][f"n_rollcalls_{chamber}"] = int(np.sum(~np.isnan(g)))
+        # backward-compatible key used by make_tables
+        res[model]["auc_within_rollcall"] = res[model][
+            "auc_within_rollcall_3plus"]
+        res[model]["n_rollcalls_3plus"] = res[model]["n_rollcalls_3plus"]
         print(model, res[model])
     (OUT / "protest_detection.json").write_text(json.dumps(res, indent=2))
 

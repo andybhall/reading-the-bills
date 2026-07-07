@@ -1,0 +1,20 @@
+{
+  "champ": {
+    "brier": 0.0994,
+    "ece": 0.0168,
+    "defshare_r": 0.345,
+    "defshare_n_rc": 995
+  },
+  "clean": {
+    "brier": 0.1075,
+    "ece": 0.0215,
+    "defshare_r": 0.322,
+    "defshare_n_rc": 995
+  },
+  "notext": {
+    "brier": 0.1472,
+    "ece": 0.0282,
+    "defshare_r": 0.267,
+    "defshare_n_rc": 995
+  }
+}

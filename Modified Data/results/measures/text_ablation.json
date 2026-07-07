@@ -1,0 +1,37 @@
+{
+  "original": {
+    "logloss": 0.3279,
+    "defect_auc": 0.784,
+    "n_auc_rollcalls": 507
+  },
+  "no_summary": {
+    "logloss": 0.3507,
+    "defect_auc": 0.811,
+    "n_auc_rollcalls": 507
+  },
+  "no_question": {
+    "logloss": 0.3832,
+    "defect_auc": 0.766,
+    "n_auc_rollcalls": 507
+  },
+  "no_propernouns": {
+    "logloss": 0.3392,
+    "defect_auc": 0.779,
+    "n_auc_rollcalls": 507
+  },
+  "no_digits": {
+    "logloss": 0.3282,
+    "defect_auc": 0.787,
+    "n_auc_rollcalls": 507
+  },
+  "generic_title": {
+    "logloss": 0.3395,
+    "defect_auc": 0.768,
+    "n_auc_rollcalls": 507
+  },
+  "shuffled_area": {
+    "logloss": 0.3915,
+    "defect_auc": 0.777,
+    "n_auc_rollcalls": 507
+  }
+}

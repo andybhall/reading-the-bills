@@ -1,0 +1,258 @@
+<!doctype html><html lang=en><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>Bill Vote Forecaster</title>
+<style>
+:root{--ink:#1a1a1a;--mut:#6b7280;--line:#e5e7eb;--bg:#fafafa;
+ --dem:#3b6fb0;--rep:#c0392b;--ind:#7a7a7a;--yea:#1f9d6b;--nay:#c0392b;
+ --card:#fff;--accent:#111}
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+ color:var(--ink);background:var(--bg);margin:0;line-height:1.5}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:26px;margin:0 0 4px}
+.sub{color:var(--mut);font-size:14px;margin:0 0 22px;max-width:70ch}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;
+ padding:18px;margin-bottom:18px}
+label{font-size:13px;font-weight:600;display:block;margin-bottom:6px}
+textarea{width:100%;height:150px;font-size:14px;padding:10px;border:1px solid var(--line);
+ border-radius:8px;resize:vertical;font-family:inherit}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin-top:12px}
+.row>div{flex:1;min-width:150px}
+select{width:100%;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+button{font-size:15px;font-weight:600;padding:10px 22px;background:var(--accent);color:#fff;
+ border:0;border-radius:8px;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.examples{margin-top:10px;font-size:12px;color:var(--mut)}
+.examples a{color:var(--dem);cursor:pointer;text-decoration:underline;margin-right:12px}
+#out{display:none}
+.verdict{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.badge{font-size:22px;font-weight:700;padding:8px 18px;border-radius:10px;color:#fff}
+.pass{background:var(--yea)} .fail{background:var(--nay)}
+.count{font-size:15px;color:var(--mut)}
+.count b{color:var(--ink);font-size:19px}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.pcard{border:1px solid var(--line);border-radius:10px;padding:12px}
+.pcard .lab{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.pcard .big{font-size:22px;font-weight:700;margin:2px 0}
+.pcard .det{font-size:12px;color:var(--mut)}
+.bar{height:7px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:7px}
+.bar>span{display:block;height:100%}
+.warn{background:#fef3c7;border:1px solid #f59e0b;color:#7c5b00;border-radius:10px;
+ padding:12px 14px;font-size:13px;margin-top:14px}
+.chip{display:inline-block;font-size:12px;padding:3px 10px;border-radius:20px;font-weight:600}
+.chip.hi{background:#dcfce7;color:#166534}.chip.mid{background:#fef9c3;color:#854d0e}
+.chip.lo{background:#fee2e2;color:#991b1b}
+svg{width:100%;height:auto;display:block}
+.axlab{font-size:11px;fill:var(--mut)}
+.tools{display:flex;gap:10px;margin:14px 0 8px;flex-wrap:wrap;align-items:center}
+.tools input{padding:7px 10px;border:1px solid var(--line);border-radius:7px;font-size:13px;flex:1;min-width:160px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:7px 8px;border-bottom:2px solid var(--line);cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:var(--dem)}
+td{padding:6px 8px;border-bottom:1px solid var(--line)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+.tbar{position:relative;height:14px;background:var(--line);border-radius:3px;width:120px;display:inline-block;vertical-align:middle}
+.tbar>span{position:absolute;top:0;left:0;height:100%;border-radius:3px}
+.tbar>i{position:absolute;top:-2px;bottom:-2px;left:50%;width:1px;background:#999}
+.pill{font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px;color:#fff}
+.ty{background:var(--yea)}.tn{background:var(--nay)}
+.foot{color:var(--mut);font-size:12px;margin-top:24px;border-top:1px solid var(--line);padding-top:14px}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid #fff;border-top-color:transparent;
+ border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style></head><body><div class=wrap>
+<h1>Bill Vote Forecaster</h1>
+<p class=sub>Paste a bill's summary &mdash; a paragraph or two describing what it
+does. A frozen language-model-based model from <i>Reading the Bills</i>
+forecasts how every member of the current (119th) Congress would vote on final
+passage, and where the bill would divide the chamber. Every number is a model
+prediction, not an observed outcome.</p>
+
+<div class=panel>
+<label for=text>Bill text or summary</label>
+<textarea id=text placeholder="A bill to ..."></textarea>
+<div class=examples>Try:
+<a data-ex=tax>a bipartisan tax bill</a>
+<a data-ex=guns>a gun-safety bill</a>
+<a data-ex=border>a border-security bill</a>
+<a data-ex=climate>a climate bill</a></div>
+<div class=examples>Or paste a real one: browse
+<a href="https://www.govtrack.us/congress/bills/browse?sort=-introduced_date"
+ target=_blank rel=noopener>recently introduced bills on GovTrack</a>
+(or search <a href="https://www.congress.gov/" target=_blank rel=noopener>Congress.gov</a>),
+open one, and copy its <b>summary</b> &mdash; the plain-language description, not
+the full legislative text.</div>
+<div class=row>
+ <div><label for=chamber>Chamber</label>
+  <select id=chamber><option>House</option><option>Senate</option></select></div>
+ <div><label for=sponsor>Sponsoring party</label>
+  <select id=sponsor><option value=D>Democratic</option>
+  <option value=R>Republican</option></select></div>
+ <div style="flex:0 0 auto"><button id=go>Forecast vote</button></div>
+</div>
+</div>
+
+<div id=out>
+ <div class=panel>
+  <div class=verdict>
+   <span id=badge class=badge></span>
+   <span class=count><b id=yeacount></b> predicted yea &nbsp;/&nbsp;
+     <b id=naycount></b> nay &nbsp;<span id=passthresh></span></span>
+   <span id=support></span>
+  </div>
+  <div id=warn class=warn style=display:none></div>
+  <div class=grid>
+   <div class=pcard><div class=lab style="color:var(--dem)">Democrats</div>
+     <div class=big id=dbig></div><div class=det id=ddet></div>
+     <div class=bar><span id=dbar style="background:var(--dem)"></span></div></div>
+   <div class=pcard><div class=lab style="color:var(--rep)">Republicans</div>
+     <div class=big id=rbig></div><div class=det id=rdet></div>
+     <div class=bar><span id=rbar style="background:var(--rep)"></span></div></div>
+   <div class=pcard><div class=lab>Cutpoint</div>
+     <div class=big id=cbig></div><div class=det id=cdet></div></div>
+  </div>
+ </div>
+
+ <div class=panel>
+  <h3 style="margin:0 0 2px;font-size:16px">Predicted vote by member ideology</h3>
+  <div class=det style="color:var(--mut);font-size:13px;margin-bottom:8px">
+   Each dot is one member, placed by first-dimension ideal point
+   (liberal&rarr;conservative) and predicted probability of voting yea. The
+   dashed line is the cutpoint. Hover for names.</div>
+  <div id=plot></div>
+ </div>
+
+ <div class=panel>
+  <h3 style="margin:0 0 0;font-size:16px">Every member</h3>
+  <div class=tools>
+   <input id=search placeholder="Search member or state...">
+   <span class=det id=tcount></span></div>
+  <div style="overflow-x:auto"><table id=tbl>
+   <thead><tr>
+    <th data-k=name>Member</th><th data-k=party>Party</th>
+    <th data-k=state>State</th><th data-k=x>Ideology</th>
+    <th data-k=p>Predicted P(yea)</th></tr></thead>
+   <tbody></tbody></table></div>
+ </div>
+</div>
+
+<div class=foot>
+ Forecasts come from the hash-pinned frozen artifact described in the paper
+ (MiniLM-tower component), scored for a final-passage rollcall
+ in the 119th Congress. The cutpoint is on the 119th-Congress ideal-point
+ scale (negative = liberal). The model reads only the pasted text plus the
+ sponsoring party; it has never seen the bill. It was trained on plain-language
+ bill summaries and reads a short (~250-word) window, so a summary works better
+ than raw legislative text. Off-agenda inputs are flagged.
+</div>
+</div>
+
+<script>
+var EX = {
+ tax:"To amend the Internal Revenue Code to expand the child tax credit, increase the standard deduction for working families, restore full expensing for research and development, and provide disaster tax relief, and for other purposes.",
+ guns:"To require a background check for every firearm sale, establish a national red-flag standard allowing courts to temporarily remove firearms from persons found to pose a danger, and for other purposes.",
+ border:"To provide additional funding for border security infrastructure and personnel, impose new limits on asylum eligibility, expand expedited removal, and require employers to use E-Verify, and for other purposes.",
+ climate:"To accelerate the transition to clean energy by extending tax credits for wind, solar, and battery manufacturing, setting a clean electricity standard, and investing in climate resilience, and for other purposes."};
+var LAST=null, SORT={k:'x',dir:1};
+document.querySelectorAll('.examples a').forEach(function(a){
+ a.onclick=function(){document.getElementById('text').value=EX[a.dataset.ex];};});
+
+document.getElementById('go').onclick=async function(){
+ var text=document.getElementById('text').value.trim();
+ if(text.length<40){alert('Please paste at least a sentence of bill text.');return;}
+ var btn=this; btn.disabled=true; btn.innerHTML='<span class=spin></span>Forecasting';
+ try{
+  var r=await fetch('/api/predict',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({text:text,chamber:document.getElementById('chamber').value,
+      sponsor:document.getElementById('sponsor').value})});
+  var j=await r.json();
+  if(j.error){alert(j.error);}else{LAST=j;render(j);}
+ }catch(e){alert('Request failed: '+e);}
+ btn.disabled=false; btn.textContent='Forecast vote';
+};
+
+function pct(x){return Math.round(x*100);}
+function render(j){
+ document.getElementById('out').style.display='block';
+ var b=document.getElementById('badge');
+ b.textContent=j.predicted_pass?'Predicted to PASS':'Predicted to FAIL';
+ b.className='badge '+(j.predicted_pass?'pass':'fail');
+ document.getElementById('yeacount').textContent=j.predicted_yea_count;
+ document.getElementById('naycount').textContent=j.predicted_nay_count;
+ document.getElementById('passthresh').textContent='(needs '+j.pass_threshold+' of '+j.n_members+')';
+ var s=j.similarity_to_floor_agenda, cls=s>0.7?'hi':(s>0.55?'mid':'lo'),
+     lab=s>0.7?'typical of floor agenda':(s>0.55?'somewhat unusual':'off the floor agenda');
+ document.getElementById('support').innerHTML='<span class="chip '+cls+'">'+lab+'</span>';
+ var w=document.getElementById('warn');
+ if(j.extrapolation_warning){w.style.display='block';w.textContent='⚠ '+j.extrapolation_warning;}
+ else{w.style.display='none';}
+ var d=j.democrats,rp=j.republicans;
+ document.getElementById('dbig').textContent=pct(d.yea_share)+'% yea';
+ document.getElementById('ddet').textContent=d.n_yea+' of '+d.n+' members';
+ document.getElementById('dbar').style.width=pct(d.yea_share)+'%';
+ document.getElementById('rbig').textContent=pct(rp.yea_share)+'% yea';
+ document.getElementById('rdet').textContent=rp.n_yea+' of '+rp.n+' members';
+ document.getElementById('rbar').style.width=pct(rp.yea_share)+'%';
+ document.getElementById('cbig').textContent=(j.cutpoint===null)?'—':j.cutpoint;
+ document.getElementById('cdet').textContent=j.cutpoint_note;
+ drawPlot(j); drawTable(j);
+}
+
+var SVGNS='http://www.w3.org/2000/svg';
+function el(tag,attrs,text){
+ var e=document.createElementNS(SVGNS,tag);
+ for(var k in attrs){if(attrs[k]!==null&&attrs[k]!==undefined)e.setAttribute(k,attrs[k]);}
+ if(text!==undefined)e.textContent=text;
+ return e;
+}
+function drawPlot(j){
+ var W=920,H=340,mL=44,mR=14,mT=14,mB=42, iw=W-mL-mR, ih=H-mT-mB;
+ var xr=j.x_range, xmin=xr[0]-0.3, xmax=xr[1]+0.3;
+ function sx(x){return mL+(x-xmin)/(xmax-xmin)*iw;}
+ function sy(p){return mT+(1-p)*ih;}
+ var col={D:'#3b6fb0',R:'#c0392b',I:'#7a7a7a'};
+ var svg=el('svg',{viewBox:'0 0 '+W+' '+H,preserveAspectRatio:'xMidYMid meet'});
+ [0,.25,.5,.75,1].forEach(function(p){var y=sy(p);
+  svg.appendChild(el('line',{x1:mL,y1:y,x2:W-mR,y2:y,stroke:(p==.5?'#bbb':'#eee'),
+    'stroke-width':1,'stroke-dasharray':(p==.5?'2,2':null)}));
+  svg.appendChild(el('text',{x:mL-6,y:y+3,'text-anchor':'end','class':'axlab'},''+p));});
+ if(j.cutpoint!==null){var cx=sx(j.cutpoint);
+  svg.appendChild(el('line',{x1:cx,y1:mT,x2:cx,y2:mT+ih,stroke:'#111','stroke-width':1.5,'stroke-dasharray':'5,3'}));
+  svg.appendChild(el('text',{x:cx+4,y:mT+11,'class':'axlab',style:'fill:#111;font-weight:600'},'cutpoint '+j.cutpoint));}
+ j.members.forEach(function(m){
+  var c=el('circle',{cx:sx(m.x).toFixed(1),cy:sy(m.p).toFixed(1),r:3.4,
+    fill:col[m.party],'fill-opacity':0.72});
+  c.appendChild(el('title',{},m.name+' ('+m.party+'-'+m.state+') — P(yea)='+m.p.toFixed(2)));
+  svg.appendChild(c);});
+ svg.appendChild(el('text',{x:mL,y:H-8,'class':'axlab'},'← more liberal'));
+ svg.appendChild(el('text',{x:W-mR,y:H-8,'text-anchor':'end','class':'axlab'},'more conservative →'));
+ svg.appendChild(el('text',{x:mL-34,y:mT+ih/2,'class':'axlab','text-anchor':'middle',
+   transform:'rotate(-90 '+(mL-34)+' '+(mT+ih/2)+')'},'Predicted P(yea)'));
+ var plot=document.getElementById('plot'); plot.innerHTML=''; plot.appendChild(svg);
+}
+
+function drawTable(j){
+ var q=document.getElementById('search').value.toLowerCase();
+ var rows=j.members.filter(function(m){
+  return !q || m.name.toLowerCase().indexOf(q)>=0 || m.state.toLowerCase().indexOf(q)>=0;});
+ rows.sort(function(a,b){var k=SORT.k,va=a[k],vb=b[k];
+  if(typeof va==='string'){return SORT.dir*va.localeCompare(vb);}
+  return SORT.dir*(va-vb);});
+ var col={D:'#3b6fb0',R:'#c0392b',I:'#7a7a7a'};
+ var h='';
+ rows.forEach(function(m){
+  var yea=m.p>=0.5;
+  h+='<tr><td><span class=dot style="background:'+col[m.party]+'"></span>'+m.name+'</td>'+
+     '<td>'+m.party+'</td><td>'+m.state+'</td><td>'+m.x.toFixed(2)+'</td>'+
+     '<td><span class=tbar><span style="width:'+pct(m.p)+'%;background:'+(yea?'var(--yea)':'var(--nay)')+'"></span><i></i></span> '+
+     '<span class="pill '+(yea?'ty':'tn')+'">'+(yea?'Yea':'Nay')+'</span> '+m.p.toFixed(2)+'</td></tr>';});
+ document.querySelector('#tbl tbody').innerHTML=h;
+ document.getElementById('tcount').textContent=rows.length+' members'+(q?' matching':'');
+}
+
+document.getElementById('search').oninput=function(){if(LAST)drawTable(LAST);};
+document.querySelectorAll('#tbl th').forEach(function(th){
+ th.onclick=function(){var k=th.dataset.k;
+  SORT.dir=(SORT.k===k)?-SORT.dir:1; SORT.k=k; if(LAST)drawTable(LAST);};});
+</script></body></html>

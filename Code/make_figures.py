@@ -298,10 +298,15 @@ def f5_surprises():
 
 # ---------------------------------------------------------------- F6
 def f6_calibration():
-    fig, ax = plt.subplots(figsize=(4.8, 4.4))
-    specs = [("gb_spatial_tfidf", "2011-style spatial + text", "#b2182b", "--"),
-             ("emb2_mlp_mq_16d_tcal", "Modern tower (calibrated)", "#4393c3", "-"),
-             ("blend3_mlp_tfidf_emb3_tcal", "Final blend", "#111111", "-")]
+    """Left: member-vote reliability curves on the forecast holdout.
+    Right: rollcall-level predicted vs realized majority-defection
+    share (review r3, R10 — the Section 4 quantities are probability
+    claims, so their calibration is shown directly)."""
+    from models_forecast import question_bucket
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(9.0, 4.2))
+    specs = [("notext_mq_16d_tcal", "No-text counterpart", "#b2182b", "--"),
+             ("emb2_mlp_mq_16d_tcal", "Leakage-clean tower", "#4393c3", "-"),
+             ("blend3_mlp_tfidf_emb3_tcal", "Ensemble", "#111111", "-")]
     for model, label, color, ls in specs:
         p = pd.read_parquet(RES / "preds" / f"forecast108_119_{model}.parquet")
         bins = np.quantile(p.p_yea, np.linspace(0, 1, 16))
@@ -312,8 +317,43 @@ def f6_calibration():
     ax.plot([0, 1], [0, 1], color="#aaaaaa", lw=0.8, zorder=0)
     ax.set_xlabel("Predicted probability of yea")
     ax.set_ylabel("Observed yea rate")
-    ax.set_title("Calibration on future rollcalls")
+    ax.set_title("(a) Member-vote reliability", fontsize=10)
     ax.legend(frameon=False, fontsize=8, loc="upper left")
+
+    rc = pd.read_parquet(ROOT / "Modified Data" / "rollcalls.parquet")[
+        ["congress", "chamber", "rollnumber", "vote_question"]]
+    mem = pd.read_parquet(ROOT / "Modified Data" / "members.parquet")[
+        ["congress", "chamber", "icpsr", "party_code"]]
+    key = ["congress", "chamber", "rollnumber"]
+    for model, label, color, ls in specs[::2]:  # no-text and ensemble
+        p = pd.read_parquet(RES / "preds" / f"forecast108_119_{model}.parquet")
+        d = (p.merge(rc, on=key, how="left")
+              .merge(mem, on=["congress", "chamber", "icpsr"], how="left",
+                     suffixes=("_v", "")))
+        d["qb"] = question_bucket(d["vote_question"])
+        d = d[d.qb.isin(["passage", "resolution", "cloture"])
+              & d.party_code.isin([100.0, 200.0])]
+        maj = (d.groupby(key + ["party_code"])["vote"].mean()
+               .rename("party_rate").reset_index())
+        d = d.merge(maj, on=key + ["party_code"])
+        d = d[d.party_rate >= 0.5]
+        g = d.groupby(key).agg(
+            pred=("p_yea", lambda s: 1 - s.mean()),
+            real=("vote", lambda s: 1 - s.mean()),
+            n=("vote", "size"))
+        g = g[g.n >= 50]
+        q = pd.qcut(g.pred, 10, duplicates="drop")
+        b = g.groupby(q, observed=True).agg(pred=("pred", "mean"),
+                                            real=("real", "mean"))
+        ax2.plot(b.pred, b.real, ls, color=color, lw=1.6, label=label,
+                 marker="o", ms=3)
+    lim = 0.20
+    ax2.plot([0, lim], [0, lim], color="#aaaaaa", lw=0.8, zorder=0)
+    ax2.set_xlabel("Predicted majority-defection share (rollcall deciles)")
+    ax2.set_ylabel("Realized majority-defection share")
+    ax2.set_title("(b) Defection-share calibration", fontsize=10)
+    ax2.legend(frameon=False, fontsize=8, loc="upper left")
+    fig.tight_layout()
     save(fig, "calibration.pdf")
 
 
@@ -350,11 +390,15 @@ def f8_cutpoint_prediction():
     rc = pd.read_parquet(MEAS / "cutpoint_rollcalls.parquet")
     d = rc[rc.test & rc.identified & rc.pred_embeddings_meta.notna()]
     d = d[d.cut_std.between(-4, 4)]
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8.4, 3.8),
-                                   gridspec_kw={"width_ratios": [1, 1.15]})
+    fig, (ax1, ax2, ax3) = plt.subplots(
+        1, 3, figsize=(9.6, 3.5), gridspec_kw={"width_ratios": [1.3, 0.85, 0.7]})
     ax1.plot([-4, 4], [-4, 4], color="#bbbbbb", lw=0.8, zorder=0)
-    ax1.scatter(d.pred_embeddings_meta, d.cut_std, s=6, alpha=0.3,
-                color="#333333", linewidths=0)
+    ax1.scatter(d.pred_embeddings_meta, d.cut_std, s=6, alpha=0.25,
+                color="#777777", linewidths=0)
+    qb = pd.qcut(d.pred_embeddings_meta, 12, duplicates="drop")
+    bm = d.groupby(qb, observed=True).agg(p=("pred_embeddings_meta", "mean"),
+                                          c=("cut_std", "mean"))
+    ax1.plot(bm.p, bm.c, "-o", color="#111111", lw=1.8, ms=3.5, zorder=3)
     r = np.corrcoef(d.pred_embeddings_meta, d.cut_std)[0, 1]
     # landmark annotations: the most discriminating passage votes with
     # recognizable short titles among the held-out rollcalls
@@ -366,15 +410,16 @@ def f8_cutpoint_prediction():
            .merge(bills, on=["congress", "bill_type", "bill_no"], how="left"))
     dd = dd[(dd.qbucket == "passage") & dd.title.notna()]
     dd["short"] = dd.title.str.extract(r"([A-Z][A-Za-z ]{3,28}? Act)")[0]
-    lab = dd[dd.short.notna()].nlargest(4, "cut_std")  # right-cutting acts
+    lab = dd[dd.short.notna()].nlargest(2, "cut_std")  # right-cutting acts
     lab = pd.concat([lab, dd[dd.short.notna()].nsmallest(2, "cut_std")])
-    for i, row in enumerate(lab.itertuples()):
+    offsets = [(5, 2), (-2, -10), (5, 2), (-2, -10)]
+    for (dx, dy), row in zip(offsets, lab.itertuples()):
         ax1.annotate(row.short, (row.pred_embeddings_meta, row.cut_std),
-                     fontsize=6, xytext=(4, 3 if i % 2 else -8),
+                     fontsize=6, xytext=(dx, dy),
                      textcoords="offset points", color="#111111")
     ax1.set_xlabel("Predicted cutpoint (text + metadata)")
     ax1.set_ylabel("Realized cutpoint")
-    ax1.set_title(f"Held-out future rollcalls (r = {r:.2f})")
+    ax1.annotate(f"r = {r:.2f}", (0.05, 0.92), xycoords="axes fraction", fontsize=9)
 
     j = json.loads((MEAS / "cutpoint_pred.json").read_text())
     names = [("metadata", "Metadata only"), ("tfidf_svd", "Text: TF-IDF"),
@@ -383,22 +428,24 @@ def f8_cutpoint_prediction():
     y = np.arange(len(names))
     mae = [j["sets"][k]["cut_mae"] for k, _ in names]
     acc = [100 * j["sets"][k]["dir_acc_identified"] for k, _ in names]
-    ax2b = ax2.twiny()
-    ax2.barh(y + 0.18, mae, height=0.34, color="#4393c3", label="Cutpoint MAE")
-    ax2b.barh(y - 0.18, acc, height=0.34, color="#b2182b", label="Direction acc. (%)")
-    ax2.axvline(j["sets"]["constant"]["cut_mae"], color="#4393c3", lw=0.9, ls=":")
-    ax2b.axvline(100 * j["sets"]["constant"]["dir_acc_identified"],
-                 color="#b2182b", lw=0.9, ls=":")
+    bar_colors = ["#aaaaaa", "#aaaaaa", "#aaaaaa", "#111111"]
+    ax2.barh(y, mae, height=0.6, color=bar_colors)
+    ax2.axvline(j["sets"]["constant"]["cut_mae"], color="#333333", lw=0.9,
+                ls=":")
     ax2.set_yticks(y)
     ax2.set_yticklabels([n for _, n in names], fontsize=8.5)
-    ax2.set_xlabel("Cutpoint MAE (member-SD units; dotted: no-feature baseline)",
-                   fontsize=8, color="#4393c3")
-    ax2b.set_xlabel("Direction accuracy, % (dotted: baseline)", fontsize=8,
-                    color="#b2182b")
-    ax2.set_xlim(0, 1.0)
-    ax2b.set_xlim(50, 70)
-    fig.suptitle("Predicting where a bill cuts the chamber, before the vote",
-                 fontweight="bold", y=1.04)
+    ax2.set_xlabel("Cutpoint mean absolute error\n(member SDs)", fontsize=8.5)
+    ax2.set_title("(b) Location error", fontsize=9.5)
+    ax2.set_xlim(0, 0.95)
+    ax3.barh(y, acc, height=0.6, color=bar_colors)
+    ax3.axvline(100 * j["sets"]["constant"]["dir_acc_identified"],
+                color="#333333", lw=0.9, ls=":")
+    ax3.set_yticks(y)
+    ax3.set_yticklabels([])
+    ax3.set_xlabel("Direction accuracy (%)", fontsize=8.5)
+    ax3.set_title("(c) Direction", fontsize=9.5)
+    ax3.set_xlim(50, 80)
+    ax1.set_title("(a) Predicted vs. realized cutpoints", fontsize=9.5)
     fig.tight_layout()
     save(fig, "cutpoint_prediction.pdf")
 
@@ -417,35 +464,44 @@ def f9_direction_terms():
     ax.axvline(0, color="#444444", lw=0.8)
     ax.set_xlabel("Coefficient: bill-summary language $\\rightarrow$ "
                   "coalition direction")
-    ax.set_title("The language of left- and right-recruiting bills\n"
-                 "(final-passage votes; blue: liberal-yea, red: conservative-yea)")
     save(fig, "direction_terms.pdf")
 
 
 # ---------------------------------------------------------------- F10
 def f10_member_gmp():
-    """Member-by-member fit on the NOMINATE literature's own statistic:
-    each member's geometric mean probability under our champion versus
-    under the classical model (frozen DW-NOMINATE positions, estimated
-    rollcall parameters), computed on identical votes."""
+    """Member-by-member fit on the field's canonical statistic: each
+    member's percent of held-out votes correctly classified under our
+    spatial model versus under the classical model (frozen DW-NOMINATE
+    positions, estimated rollcall parameters), on identical votes.
+    The GMP version tells the same story and its macros remain in the
+    text as the proper-scoring variant."""
     mf = pd.read_parquet(MEAS / "member_fit.parquet")
     mf = mf[mf.n >= 100]
+    cc_nom, cc_ours = 100 * (1 - mf.err_nom), 100 * (1 - mf.err_ours)
     fig, ax = plt.subplots(figsize=(5.4, 5.0))
-    ax.plot([0.2, 1], [0.2, 1], color="#bbbbbb", lw=0.8, zorder=0)
-    ax.scatter(mf.gmp_nom, mf.gmp_ours, s=8, alpha=0.4,
+    ax.plot([55, 100], [55, 100], color="#bbbbbb", lw=0.8, zorder=0)
+    ax.scatter(cc_nom, cc_ours, s=8, alpha=0.4,
                c=party_color(mf.party_code), linewidths=0)
-    lab = mf.assign(g=mf.gmp_ours - mf.gmp_nom).nlargest(8, "g")
+    named = mf.bioname.str.contains("PAUL, Ronald|AMASH", na=False)
+    lab = pd.concat([
+        mf.assign(g=mf.err_nom - mf.err_ours,
+                  ccn=cc_nom, cco=cc_ours).nlargest(6, "g"),
+        mf[named].assign(g=0.0, ccn=cc_nom[named], cco=cc_ours[named])])
     for i, r in enumerate(lab.itertuples()):
         ax.annotate(shortname(r.bioname, r.state_abbrev),
-                    (r.gmp_nom, r.gmp_ours), fontsize=6.5,
+                    (r.ccn, r.cco), fontsize=6.5,
                     xytext=(5, -2 if i % 2 else 4),
                     textcoords="offset points")
-    share = (mf.gmp_ours > mf.gmp_nom).mean()
-    ax.set_xlabel("Held-out GMP, DW-NOMINATE-based model")
-    ax.set_ylabel("Held-out GMP, this paper's spatial model")
-    ax.set_title("Member-by-member fit on identical held-out votes\n"
-                 f"(higher for {share:.0%} of members; largest gains labeled)")
-    save(fig, "member_gmp.pdf")
+    share = (mf.err_ours < mf.err_nom).mean()
+    ax.set_xlabel("Held-out votes correctly classified (%), "
+                  "DW-NOMINATE-based model")
+    ax.set_ylabel("Held-out votes correctly classified (%), "
+                  "this paper's spatial model")
+    ax.annotate(f"higher under this model for {share:.0%} of members",
+                (0.05, 0.95), xycoords="axes fraction", fontsize=9)
+    ax.set_xlim(55, 100.5)
+    ax.set_ylim(55, 100.5)
+    save(fig, "member_cc.pdf")
 
 
 # ---------------------------------------------------------------- F11
@@ -467,7 +523,7 @@ def f11_transitions():
     ax1.set_xticklabels([str(c) for c, _ in rows])
     ax1.set_xlabel("Test congress (red: majority flipped)")
     ax1.set_ylabel("Test log loss")
-    ax1.set_title("Cross-congress transfer, all transitions")
+    ax1.set_title("(a) All votes", fontsize=9.5)
     ax1.legend(frameon=False, fontsize=8)
 
     for qb, marker, lab in (("procedural", "o", "Procedural"),
@@ -481,19 +537,18 @@ def f11_transitions():
     ax2.set_xticks(xs)
     ax2.set_xticklabels([str(c) for c, _ in rows])
     ax2.set_xlabel("Test congress")
-    ax2.set_title("The damage is procedural, and flips cause it")
+    ax2.set_title("(b) By vote type", fontsize=9.5)
     ax2.legend(frameon=False, fontsize=8)
     save(fig, "transitions.pdf")
 
 
 # ---------------------------------------------------------------- F12
 def f12_protest():
-    """The killer exhibit for point 2: one storied majority-splitting
-    vote (H.R. 10545, the shutdown-averting American Relief Act,
-    Dec 20 2024, holdout window), predicted twice by the same
-    architecture — once without reading the bill, once reading it.
-    The no-text model cannot see the flank revolt; the text model
-    prices it member by member."""
+    """One majority-splitting vote (H.R. 10545, the shutdown-averting
+    American Relief Act, Dec 20 2024, holdout window), predicted twice
+    by the same architecture — once without reading the bill, once
+    reading it. The no-text model cannot see the flank revolt; the
+    text model prices it member by member."""
     mem = pd.read_parquet(MEAS / "members_house118.parquet")
     names = mem[["icpsr", "x", "bioname", "state_abbrev", "party_code"]]
     panels = [("notext_mq_16d_tcal", "Without reading the bill"),
@@ -521,10 +576,144 @@ def f12_protest():
                             textcoords="offset points")
     axes[0].set_ylabel("Predicted P(yea), pre-vote")
     axes[0].legend(frameon=False, fontsize=8, loc="lower left")
-    fig.suptitle("One vote, two models: the American Relief Act revolt "
-                 "(December 2024, holdout window)", fontweight="bold", y=1.03)
     fig.tight_layout()
     save(fig, "protest_detection.pdf")
+
+
+def f14_defector_capture():
+    """Pooled companion to the single-vote exhibit (P5v10): across all
+    majority-yea holdout rollcalls with >= 3 defections, the share of
+    actual defectors found among the top-k majority members ranked by
+    predicted defection probability, averaged over rollcalls. Chance =
+    ranking members at random (k / party size)."""
+    from models_forecast import question_bucket
+    key = ["congress", "chamber", "rollnumber"]
+    rc = pd.read_parquet(ROOT / "Modified Data" / "rollcalls.parquet")[
+        key + ["vote_question"]]
+    mem = pd.read_parquet(ROOT / "Modified Data" / "members.parquet")[
+        ["congress", "chamber", "icpsr", "party_code"]]
+    ks = np.arange(1, 41)
+    fig, (ax0, ax) = plt.subplots(1, 2, figsize=(9.2, 4.2))
+    specs = [("blend3_mlp_tfidf_emb3_tcal", "Reading the bill",
+              "#111111", "-"),
+             ("notext_mq_16d_tcal", "Without reading the bill",
+              "#b2182b", "--")]
+    chance = None
+    per_vote = {}
+    for model, label, color, ls in specs:
+        p = pd.read_parquet(RES / "preds" / f"forecast108_119_{model}.parquet")
+        d = (p.merge(rc, on=key, how="left")
+              .merge(mem, on=["congress", "chamber", "icpsr"], how="left",
+                     suffixes=("_v", "")))
+        d["qb"] = question_bucket(d["vote_question"])
+        d = d[d.qb.isin(["passage", "resolution", "cloture"])
+              & d.party_code.isin([100.0, 200.0])]
+        maj = (d.groupby(key + ["party_code"])["vote"].mean()
+               .rename("party_rate").reset_index())
+        d = d.merge(maj, on=key + ["party_code"])
+        d = d[d.party_rate >= 0.5]
+        d["defect"] = (d.vote == 0).astype(int)
+        recalls, sizes, aucs = [], [], {}
+        for gk, x in d.groupby(key + ["party_code"]):
+            nd = x.defect.sum()
+            if nd < 3 or nd == len(x):
+                continue
+            x = x.sort_values("p_yea")           # likeliest defectors first
+            cum = x.defect.to_numpy().cumsum()
+            recalls.append([cum[min(k, len(x)) - 1] / nd for k in ks])
+            sizes.append(len(x))
+            rr = (1 - x.p_yea).rank().to_numpy()
+            n1, n0 = int(nd), int(len(x) - nd)
+            aucs[gk] = float((rr[x.defect == 1].sum()
+                              - n1 * (n1 + 1) / 2) / (n1 * n0))
+        per_vote[model] = aucs
+        r = np.mean(recalls, axis=0)
+        ax.plot(ks, 100 * r, ls, color=color, lw=1.8, label=label)
+        if chance is None:
+            chance = np.mean([[min(k / n, 1) for k in ks] for n in sizes],
+                             axis=0)
+    # panel (a): the same detection statistic vote by vote — the text
+    # gain is a distribution, concentrated on the votes member history
+    # gets most wrong
+    a_t = per_vote["blend3_mlp_tfidf_emb3_tcal"]
+    a_n = per_vote["notext_mq_16d_tcal"]
+    common = sorted(set(a_t) & set(a_n))
+    xs = np.array([a_n[k] for k in common])
+    ys = np.array([a_t[k] for k in common])
+    ax0.plot([0.2, 1], [0.2, 1], color="#bbbbbb", lw=0.8, zorder=0)
+    ax0.scatter(xs, ys, s=9, alpha=0.4, color="#333333", linewidths=0)
+    share = (ys > xs).mean()
+    ax0.annotate(f"text model higher on {share:.0%} of votes",
+                 (0.05, 0.95), xycoords="axes fraction", fontsize=9)
+    ax0.set_xlabel("Defection AUC without reading the bill")
+    ax0.set_ylabel("Defection AUC reading the bill")
+    ax0.set_title("(a) Vote by vote", fontsize=10)
+    ax.set_xlabel("Majority members screened, in order of predicted risk")
+    ax.set_ylabel("Share of actual defectors found (%)")
+    ax.set_title("(b) Pooled screening curve", fontsize=10)
+    ax.plot(ks, 100 * chance, ":", color="#999999", lw=1.2,
+            label="Chance (random ranking)")
+    ax.legend(frameon=False, fontsize=8.5, loc="lower right")
+    ax.set_xlim(1, 40)
+    ax.set_ylim(0, 100)
+    fig.tight_layout()
+    save(fig, "defector_capture.pdf")
+
+
+def f13_revolt_risk():
+    """A pre-vote measure of party stress (review r4, downstream use):
+    the champion's predicted majority-defection share for every
+    majority-yea passage-family vote in the 118th House holdout window,
+    plotted by vote date against the realized share. The point is that
+    the measure exists BEFORE each vote: leadership stress on the
+    curated agenda is forecastable, and it spikes on the bipartisan
+    deals and discharge-petition bills, not routine business."""
+    from models_forecast import question_bucket
+    key = ["congress", "chamber", "rollnumber"]
+    p = pd.read_parquet(
+        RES / "preds" / "forecast108_119_blend3_mlp_tfidf_emb3_tcal.parquet")
+    rc = pd.read_parquet(ROOT / "Modified Data" / "rollcalls.parquet")[
+        key + ["date", "vote_question", "vote_desc"]]
+    mem = pd.read_parquet(ROOT / "Modified Data" / "members.parquet")[
+        ["congress", "chamber", "icpsr", "party_code"]]
+    d = (p.merge(rc, on=key, how="left")
+          .merge(mem, on=["congress", "chamber", "icpsr"], how="left",
+                 suffixes=("_v", "")))
+    d = d[(d.congress == 118) & (d.chamber == "House")]
+    d["qb"] = question_bucket(d["vote_question"])
+    d = d[d.qb.isin(["passage", "resolution", "cloture"])
+          & (d.party_code == 200.0)]                    # GOP majority
+    g = d.groupby(key + ["date", "vote_desc"], dropna=False).agg(
+        pred=("p_yea", lambda s: 1 - s.mean()),
+        real=("vote", lambda s: 1 - s.mean()),
+        n=("vote", "size")).reset_index()
+    g = g[(g.n >= 150) & (g.real < 0.5)]                # majority-yea votes
+
+    fig, ax = plt.subplots(figsize=(5.4, 4.6))
+    lim = max(g.real.max(), g.pred.max()) * 1.06
+    ax.plot([0, lim], [0, lim], color="#bbbbbb", lw=0.8, zorder=0)
+    ax.scatter(g.pred, g.real, s=26, alpha=0.75, color="#333333",
+               linewidths=0, zorder=2)
+    # binned means make the monotone relationship legible through the
+    # vertical scatter
+    q = pd.qcut(g.pred, 6, duplicates="drop")
+    b = g.groupby(q, observed=True).agg(p=("pred", "mean"),
+                                        r=("real", "mean"))
+    ax.plot(b.p, b.r, "-o", color=REP, lw=1.8, ms=4, zorder=3,
+            label="binned mean")
+    lab = pd.concat([g.nlargest(3, "real"), g.nlargest(2, "pred")])
+    lab = lab.drop_duplicates(subset=["rollnumber"]).sort_values(
+        "real", ascending=False)
+    offs = [(6, 2), (6, -10), (6, 2), (6, 2), (-6, -10)]
+    for (dx, dy), (_, r) in zip(offs, lab.iterrows()):
+        ax.annotate(str(r.vote_desc)[:26], (r.pred, r.real), fontsize=6.5,
+                    xytext=(dx, dy), textcoords="offset points",
+                    ha="left" if dx > 0 else "right")
+    ax.set_xlabel("Predicted majority-defection share (before the vote)")
+    ax.set_ylabel("Realized majority-defection share")
+    ax.legend(frameon=False, fontsize=8.5, loc="upper left")
+    fig.tight_layout()
+    save(fig, "revolt_risk.pdf")
 
 
 def main():
@@ -547,6 +736,8 @@ def main():
         f11_transitions()
     if (RES / "preds" / "forecast108_119_notext_mq_16d_tcal.parquet").exists():
         f12_protest()
+        f13_revolt_risk()
+        f14_defector_capture()
 
 
 if __name__ == "__main__":

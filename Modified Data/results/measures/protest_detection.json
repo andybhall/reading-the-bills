@@ -3,14 +3,42 @@
     "n_member_votes": 280178,
     "n_defections": 11993,
     "auc_pooled": 0.79,
-    "auc_within_rollcall": 0.797,
-    "n_rollcalls_3plus": 517
+    "auc_within_rollcall_3plus": 0.797,
+    "n_rollcalls_3plus": 517,
+    "auc_within_rollcall_1plus": 0.812,
+    "n_rollcalls_1plus": 696,
+    "auc_within_House": 0.815,
+    "n_rollcalls_House": 437,
+    "auc_within_Senate": 0.702,
+    "n_rollcalls_Senate": 80,
+    "auc_within_rollcall": 0.797
+  },
+  "emb2_mlp_mq_16d_tcal": {
+    "n_member_votes": 280178,
+    "n_defections": 11993,
+    "auc_pooled": 0.773,
+    "auc_within_rollcall_3plus": 0.793,
+    "n_rollcalls_3plus": 517,
+    "auc_within_rollcall_1plus": 0.806,
+    "n_rollcalls_1plus": 696,
+    "auc_within_House": 0.81,
+    "n_rollcalls_House": 437,
+    "auc_within_Senate": 0.699,
+    "n_rollcalls_Senate": 80,
+    "auc_within_rollcall": 0.793
   },
   "notext_mq_16d_tcal": {
     "n_member_votes": 280178,
     "n_defections": 11993,
     "auc_pooled": 0.736,
-    "auc_within_rollcall": 0.754,
-    "n_rollcalls_3plus": 517
+    "auc_within_rollcall_3plus": 0.754,
+    "n_rollcalls_3plus": 517,
+    "auc_within_rollcall_1plus": 0.771,
+    "n_rollcalls_1plus": 696,
+    "auc_within_House": 0.763,
+    "n_rollcalls_House": 437,
+    "auc_within_Senate": 0.702,
+    "n_rollcalls_Senate": 80,
+    "auc_within_rollcall": 0.754
   }
 }

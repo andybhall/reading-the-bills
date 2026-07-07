@@ -1,0 +1,12 @@
+[project]
+name = "bill-vote-forecaster"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy==2.2.1",
+    "onnxruntime==1.27.0",
+    "tokenizers==0.22.2",
+]
+
+[tool.vercel]
+entrypoint = "api.predict:handler"

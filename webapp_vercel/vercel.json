@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "alias": ["bill-forecaster.vercel.app"],
+  "functions": {
+    "api/predict.py": {
+      "maxDuration": 30,
+      "includeFiles": "model/**"
+    }
+  }
+}

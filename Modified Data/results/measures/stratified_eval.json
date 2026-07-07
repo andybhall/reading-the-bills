@@ -1,0 +1,115 @@
+{
+  "champ": {
+    "ll_all": 0.3241,
+    "ll_House": 0.3065,
+    "n_House": 612379,
+    "ll_Senate": 0.4644,
+    "n_Senate": 76972,
+    "ll_seen": 0.5045,
+    "n_seen": 69393,
+    "rc_seen": 368,
+    "ll_fresh": 0.3001,
+    "n_fresh": 606453,
+    "rc_fresh": 1911
+  },
+  "clean": {
+    "ll_all": 0.3483,
+    "ll_House": 0.3309,
+    "n_House": 612379,
+    "ll_Senate": 0.4872,
+    "n_Senate": 76972,
+    "ll_seen": 0.5177,
+    "n_seen": 69393,
+    "rc_seen": 368,
+    "ll_fresh": 0.3247,
+    "n_fresh": 606453,
+    "rc_fresh": 1911
+  },
+  "notext": {
+    "ll_all": 0.4392,
+    "ll_House": 0.434,
+    "n_House": 612379,
+    "ll_Senate": 0.4805,
+    "n_Senate": 76972,
+    "ll_seen": 0.5902,
+    "n_seen": 69393,
+    "rc_seen": 368,
+    "ll_fresh": 0.4206,
+    "n_fresh": 606453,
+    "rc_fresh": 1911
+  },
+  "policy_gain": [
+    {
+      "area": "Government Operations and Politics",
+      "n_rc": 64,
+      "gain_champ": 0.10326315078169654,
+      "gain_clean": 0.09409247551638675
+    },
+    {
+      "area": "International Affairs",
+      "n_rc": 40,
+      "gain_champ": 0.08997888141895971,
+      "gain_clean": 0.07470951242716656
+    },
+    {
+      "area": "Public Lands and Natural Resources",
+      "n_rc": 46,
+      "gain_champ": 0.0747307459395308,
+      "gain_clean": 0.0620230108930542
+    },
+    {
+      "area": "Armed Forces and National Security",
+      "n_rc": 90,
+      "gain_champ": 0.05143164062122485,
+      "gain_clean": 0.05857665184533922
+    },
+    {
+      "area": "Transportation and Public Works",
+      "n_rc": 26,
+      "gain_champ": 0.04429091663771359,
+      "gain_clean": 0.03523827509061117
+    },
+    {
+      "area": "Economics and Public Finance",
+      "n_rc": 51,
+      "gain_champ": 0.011792601311085338,
+      "gain_clean": 0.016885174143385417
+    },
+    {
+      "area": "Crime and Law Enforcement",
+      "n_rc": 58,
+      "gain_champ": 0.05844960946140715,
+      "gain_clean": 0.010984509802954567
+    },
+    {
+      "area": "Energy",
+      "n_rc": 28,
+      "gain_champ": 0.04438585462161743,
+      "gain_clean": 0.004906448708664302
+    },
+    {
+      "area": "Health",
+      "n_rc": 50,
+      "gain_champ": 0.05160234809836059,
+      "gain_clean": -0.005657084853126271
+    },
+    {
+      "area": "Taxation",
+      "n_rc": 43,
+      "gain_champ": 0.041999543099715375,
+      "gain_clean": -0.021134567597049014
+    },
+    {
+      "area": "Congress",
+      "n_rc": 165,
+      "gain_champ": -0.00566777722206066,
+      "gain_clean": -0.028065639699475037
+    },
+    {
+      "area": "Finance and Financial Sector",
+      "n_rc": 43,
+      "gain_champ": 0.022396814610192273,
+      "gain_clean": -0.06962913041723479
+    }
+  ]
+}

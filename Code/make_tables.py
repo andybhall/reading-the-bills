@@ -134,8 +134,10 @@ def litrace(lb):
             fmt(get(lb, m, "randomrc108_119", "log_loss")),
             fmt(get(lb, m, "randomrc108_119", "auc"))]))
     tabular(OUT / "litrace.tex",
-            "Model & Fcst.\\ LL & Fcst.\\ AUC & Fcst.\\ cont.\\ acc.\\ (\\%) & "
-            "Rand.\\ LL & Rand.\\ AUC",
+            "\\multicolumn{1}{l}{} & \\multicolumn{3}{c}{Temporal forecast} "
+            "& \\multicolumn{2}{c}{Random rollcall} \\\\\n"
+            "\\cmidrule(lr){2-4}\\cmidrule(lr){5-6}\n"
+            "Model & LL & AUC & Cont.\\ acc. & LL & AUC",
             rows, "lccccc")
 
 
@@ -486,6 +488,19 @@ def numbers(lb):
             "PAUL, Ronald", na=False), "gmp_nom"].iloc[0], 2)),
         macro("paulGMPours", fmt(mf.loc[mf.bioname.str.contains(
             "PAUL, Ronald", na=False), "gmp_ours"].iloc[0], 2)),
+        # canonical classification versions (review v10: lead with the
+        # Poole-Rosenthal statistic; GMP kept as the proper-scoring variant)
+        macro("memberCCshare", pct((mf.err_ours < mf.err_nom).mean())),
+        macro("memberCCmedOurs", fmt(100 * (1 - mf.err_ours.median()), 1)),
+        macro("memberCCmedNom", fmt(100 * (1 - mf.err_nom.median()), 1)),
+        macro("paulCCnom", fmt(100 * (1 - mf.loc[mf.bioname.str.contains(
+            "PAUL, Ronald", na=False), "err_nom"].iloc[0]), 1)),
+        macro("paulCCours", fmt(100 * (1 - mf.loc[mf.bioname.str.contains(
+            "PAUL, Ronald", na=False), "err_ours"].iloc[0]), 1)),
+        macro("omarCCnom", fmt(100 * (1 - mf.loc[mf.bioname.str.contains(
+            "OMAR, Ilhan", na=False), "err_nom"].iloc[0]), 1)),
+        macro("tlaibCCnom", fmt(100 * (1 - mf.loc[mf.bioname.str.contains(
+            "TLAIB", na=False), "err_nom"].iloc[0]), 1)),
     ]
     # transition-study summary macros
     tr = json.loads((RES / "measures" / "transitions.json").read_text())
@@ -513,6 +528,16 @@ def numbers(lb):
         macro("protRC", f"{pdj['blend3_mlp_tfidf_emb3_tcal']['n_rollcalls_3plus']}"),
         macro("notextForecastLL", fmt(get(lb, "notext_mq_16d_tcal",
                                           "forecast108_119", "log_loss"))),
+        # review r3: leakage-clean tower, unfiltered subset, chamber split
+        macro("protAUCclean", fmt(pdj["emb2_mlp_mq_16d_tcal"]["auc_within_rollcall"], 2)),
+        macro("protAUCtextAll", fmt(pdj["blend3_mlp_tfidf_emb3_tcal"]["auc_within_rollcall_1plus"], 2)),
+        macro("protAUCnotextAll", fmt(pdj["notext_mq_16d_tcal"]["auc_within_rollcall_1plus"], 2)),
+        macro("protRCall", f"{pdj['blend3_mlp_tfidf_emb3_tcal']['n_rollcalls_1plus']}"),
+        macro("protAUCtextHouse", fmt(pdj["blend3_mlp_tfidf_emb3_tcal"]["auc_within_House"], 2)),
+        macro("protAUCnotextHouse", fmt(pdj["notext_mq_16d_tcal"]["auc_within_House"], 2)),
+        macro("protAUCtextSenate", fmt(pdj["blend3_mlp_tfidf_emb3_tcal"]["auc_within_Senate"], 2)),
+        macro("protAUCnotextSenate", fmt(pdj["notext_mq_16d_tcal"]["auc_within_Senate"], 2)),
+        macro("protRCsenate", f"{pdj['blend3_mlp_tfidf_emb3_tcal']['n_rollcalls_Senate']}"),
     ]
     cp = json.loads((RES / "measures" / "cutpoint_pred.json").read_text())["sets"]
     lines += [

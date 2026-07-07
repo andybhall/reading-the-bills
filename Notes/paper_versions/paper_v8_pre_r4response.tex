@@ -1,0 +1,926 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1.1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,multirow}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\input{tables/numbers.tex}
+\input{tables/worked_example_macros.tex}
+\input{tables/embedding_macros.tex}
+\input{tables/stratified_macros.tex}
+\input{tables/ablation_macros.tex}
+\input{tables/calibration_macros.tex}
+\input{tables/overlap_macros.tex}
+\input{tables/counterfactual_macros.tex}
+\input{tables/cutpoint_strata_macros.tex}
+\input{tables/hardcase_macros.tex}
+
+\title{Reading the Bills: Text, Votes, and the\\ Measurement of Congress}
+\author{Andrew B.\ Hall\thanks{Stanford University. Replication materials,
+including the full pipeline, model registry, pre-registered experiment
+ledger, and session logs of the AI-assisted development process, are
+available in the project repository. Every statistic and figure is
+generated programmatically from the analysis code's output files; no
+number is transcribed by hand.}}
+\date{Draft: July 2026 --- preliminary, comments welcome}
+
+\begin{document}
+\maketitle
+\onehalfspacing
+
+\begin{abstract}
+\noindent The models political science uses to measure Congress
+predict rollcall votes without reading the bills being voted on. We
+construct an open benchmark of 10.6 million individual voting
+decisions (101st--119th Congresses) and evaluate an ensemble whose
+language-model encoders take the text of each measure as input. Three
+results follow. First, the approach outperforms existing ones: on
+identical held-out votes it improves on DW-NOMINATE under the
+classification literature's own fit statistic, with the largest gains
+concentrated among the members one-dimensional scaling is known to
+mis-measure (Ron Paul's geometric mean probability rises from
+\paulGMPnom{} to \paulGMPours), and on strictly future votes a frozen,
+hash-pinned artifact sustains \champForecastAcc\% accuracy---beyond
+both classical spatial models and the earlier text-based literature.
+Second, the text is what allows the model to anticipate protest
+voting: across \protRC{} held-out majority-side rollcalls, reading
+the bill raises within-vote defection detection from \protAUCnotext{}
+to \protAUCtext{} AUC, and embedding-space diagnostics show how---the
+encoder places bills that provoke intra-party revolts near earlier
+bills that provoked them, and a linear probe on the text alone
+predicts each rollcall's majority-defection share out of sample.
+Third, text locates bills before anyone votes: on \cutTestN{}
+held-out future rollcalls, text plus pre-vote metadata predicts
+realized cutpoints at $r = \cutComboR$ and coalition direction at
+\dirCombo\%, a prospective counterpart to a bill-location literature
+that has required realized votes. We release the benchmark, the
+models, an interactive forecaster, and a pre-registered ledger of
+every experiment, positive and negative.
+\end{abstract}
+
+\section{Introduction}
+
+Nearly everything political science measures about Congress---ideal
+points, party unity, issue positions---derives from models of
+rollcall votes that treat the bill under consideration as an indexed
+event with estimable parameters rather than as a text with content
+\citep{poole1997congress, clinton2004statistical}. A literature at
+the intersection of machine learning and legislative studies sought
+to change this with the text tools of its era
+\citep{gerrish2011predicting, kraft2016embedding}, and the
+measurement literature has since pressed on the classical model from
+several directions: unpredictable voters
+\citep{lauderdale2010unpredictable}, issue-specific dimensions
+\citep{lauderdale2014scaling, crespin2010dimensions}, estimators for
+massive vote matrices \citep{imai2016fast}, machine learning as a
+measurement strategy \citep{bonica2018inferring}, and, most recently,
+purpose-built models for the members whom one-dimensional scaling
+visibly mis-measures---extremists who vote with the opposite pole
+\citep{duckmayr2023ends} and majority members who cast protest votes
+against bills they arguably prefer \citep{fowler2026protest}. Modern
+language models read legislative text far better than anything
+available to the earlier program. This paper asks what that capacity
+contributes to the measurement of Congress and offers a three-part
+answer.
+
+First, the approach outperforms existing ones
+(Section~\ref{sec:outperform}). On an open benchmark of 10.6 million
+voting decisions spanning the 101st through 119th Congresses, models
+that read the bills improve on the classical toolkit in both of the
+settings that toolkit defines. In the psychometric completion
+setting---a vote-only exercise in which no text enters---an
+expressive spatial model fits held-out votes better than frozen
+DW-NOMINATE for \memberGMPshare\% of members on the NOMINATE
+literature's own statistic, with the improvements concentrated in
+precisely the cases that motivated a decade of bespoke scaling
+models. In genuine
+forecasting, a text-reading ensemble attains \champForecastAcc\%
+accuracy on strictly future votes (\champContestedAcc\% on contested
+votes); the 2011--2016 text-based models, reimplemented and evaluated
+under identical conditions, do not improve on a simple table of
+member voting rates. A frozen artifact, hash-pinned before the votes
+it is scored on were cast, verifies that these figures do not reflect
+researcher iteration on the test set.
+
+Second, reading the bill is what allows the model to anticipate
+protest voting (Section~\ref{sec:protest}). Protest voting---majority
+members defecting on bills they arguably prefer---is the newest
+concern of the scaling literature \citep{fowler2026protest,
+duckmayr2023ends}, where it has been treated retrospectively, by
+reinterpreting votes already cast. We show that protest voting is
+predictable in advance and locate the source of the predictability in
+the text. Member history identifies who sits on a bill's losing
+flank; only the bill's content indicates which bills put the flank in
+revolt. We document the mechanism directly: in the encoder's
+embedding space, a shutdown-averting continuing resolution sits in a
+neighborhood of earlier must-pass fiscal packages that provoked the
+same right-flank defections, and a linear probe on the text alone
+predicts each holdout rollcall's majority-defection share with no
+member-level information whatsoever.
+
+Third, text predicts where a bill will divide the chamber before
+anyone votes (Section~\ref{sec:cutpoints}). The bill-location
+literature estimates proposal and status-quo positions from realized
+votes and cosponsorships \citep{peress2013estimating,
+richman2011parties}; by construction it cannot locate a bill that has
+not been voted on. We show that a bill's text can: on held-out future
+rollcalls, text plus pre-vote metadata predicts realized cutpoint
+locations at $r = \cutComboR$ and coalition direction at \dirCombo\%.
+The division of labor among the inputs is itself informative:
+institutional metadata indicates where a vote will cut, the acting
+legislator's party supplies a default side, and the bill's content
+indicates when the default is wrong. An interactive forecaster
+operationalizes the result for hypothetical bills.
+
+The remainder of what this exercise produced---evaluation-regime
+audits, negative results with diagnosed mechanisms, the behavior of
+member history across majority transitions---appears in the
+appendices and repository. Section~\ref{sec:limits} states the two
+boundaries a user of these methods should know.
+
+\section{Benchmark, Models, and Definitions}
+\label{sec:setup}
+
+\textbf{Task and data.} We predict individual voting decisions: given
+everything observable before a rollcall, each member's probability of
+voting yea, conditional on a recorded yea or nay. The panel comprises
+every such decision in the 101st--119th Congresses from Voteview
+\citep{lewis2026voteview}; bill-side information (titles, dated
+summary versions, sponsors, amendment records) comes from government
+BILLSTATUS files, which begin with the 108th Congress. All
+forecasting results therefore use the text-era congresses
+(108th--119th); earlier congresses enter only the no-text completion
+fits. Splits are deterministic and content-hashed, the evaluation
+harness strips labels before models see evaluation rows, and the
+feature-timing audit appears in Appendix~\ref{app:audit}.
+
+\textbf{Evaluation.} We evaluate under progressively stricter
+information constraints: \emph{completion}, in which random votes are
+held out and same-rollcall votes remain observable (the psychometric
+setting in which ideal-point models are traditionally assessed);
+\emph{temporal forecast}, in which each congress-chamber's final ten
+percent of rollcalls by date is held out; and \emph{prospective}, in
+which hash-pinned frozen artifacts are scored only on votes cast
+after they were finalized, following the reusable-holdout logic of
+\citet{dwork2015holdout}. Metrics are the field's standard ones:
+correct classification, APRE, and geometric mean probability
+\citep{carroll2013structure}, with log loss ($= -\log \mathrm{GMP}$)
+as the primary scoring rule.
+
+\textbf{Models.} The forecasting model is a logistic blend of
+two-tower networks: member embeddings interact with rollcall
+parameters that a deep head amortizes from pre-vote text (the vote
+question, the vote description, and the latest bill summary dated
+before the vote), anchored on member-by-question empirical rates and
+calibrated on a temporal slice of the training data. Its no-text
+counterpart---the identical architecture with all text inputs
+deleted---serves as the counterfactual throughout. The classical
+comparators are logistic ideal-point models, a frozen-DW-NOMINATE
+model, and reimplementations of the 2011--2016 text-based models.
+The full specification appears in Appendix~\ref{app:spec};
+development followed a pre-registered experiment ledger
+(Appendix~\ref{app:ledger}).
+
+\textbf{Definitions.} The spatial fits estimate $P(\text{yea}) =
+\sigma(a_v x_i + b_v + c_i)$ per chamber-congress (party-sign
+initialized); a rollcall's \emph{average-member cutpoint} is
+$-(b_v + \bar c)/a_v$, reported when $|a_v| \geq 0.35$ on the fitted
+scale, with \emph{direction} $\mathrm{sign}(a_v)$. All derived
+quantities are conditional on the realized rollcall agenda. The
+identifying normalization: member positions are standardized within
+chamber-congress (mean zero, unit variance) and oriented so that the
+Republican mean exceeds the Democratic mean; cutpoints, the
+$|a_v|$ screen, and directions are stated on that scale.
+
+\section{The Approach Outperforms Existing Ones}
+\label{sec:outperform}
+
+The classical toolkit is assessed in two settings---completing a vote
+matrix and forecasting future votes---and we take each in turn.
+
+\subsection{Held-out fit against the canonical measure}
+
+The completion regime involves no text: it asks only how well a
+spatial model of votes fits held-out votes, and so isolates model
+flexibility from bill content. In it, an eight-dimensional spatial
+model reaches a geometric mean probability of \regimeAbestGMP{}
+(\regimeAbestAcc\% correct classification) on held-out votes, against
+\regimeAnominateGMP{} for frozen DW-NOMINATE positions with estimated
+rollcall parameters; the full ladder of intermediate models appears
+in Appendix Table~\ref{tab:regimeA}. Both models are fit on identical
+training cells and scored on held-out cells that neither model's
+parameters---including the rollcall parameters---were estimated on.
+Figure~\ref{fig:membergmp} disaggregates the comparison to the member
+level, computing each member's held-out GMP under both models on
+identical votes. Two
+features of the figure organize the result. For the typical member,
+DW-NOMINATE is nearly unimprovable: the median member GMP is
+\memberGMPmedNom{} under the classical model and \memberGMPmedOurs{}
+under ours, and the richer model is higher for \memberGMPshare\% of
+members. The improvements instead concentrate in the tail---and the
+tail is composed of exactly the members for whom the past decade of
+scaling research built bespoke models. Ron Paul's held-out GMP rises
+from \paulGMPnom{} to \paulGMPours. The other labeled members---
+Justin Amash, Helen Chenoweth-Hage, Mark Neumann, Timothy
+Penny---are ends-against-the-middle voters and habitual defectors of
+the kind modeled by \citet{duckmayr2023ends} and
+\citet{fowler2026protest}; here a single flexible model absorbs them
+without member-specific machinery. Table~\ref{tab:hardcase} takes the
+two canonical cases vote by vote: the held-out votes on which the
+flexible model most improves are exactly the votes that made these
+members famous cases. For Paul (\paulHeldoutN{} held-out votes), the
+largest improvements are nay votes on defense authorizations and
+appropriations, an intelligence authorization, the Electronic
+Surveillance Modernization Act, and an Iran-focused resolution---votes
+the one-dimensional model prices below two percent and the flexible
+model above ninety-five. For Amash (\amashHeldoutN{}), they are rules
+resolutions, a commemorative commission extension, an
+Israeli--Palestinian policy resolution, and the FY2019 national
+defense authorization. The improvements, in short, sit on the
+libertarian and procedural-objector votes the bespoke-model
+literature describes, recovered here without member-specific
+machinery. Convergent validity is preserved:
+the model's first-dimension member positions (the oriented leading
+coordinate of the fitted space) correlate with first-dimension
+DW-NOMINATE at $r = .98$, and per-congress with Nokken--Poole scores
+\citep{nokken2004congressional} at $r = \npRmin$--$\npRmax$, so the
+improvement in fit does not come at the cost of the scale's
+interpretation.
+
+\begin{table}[t]
+\centering
+\caption{The canonical hard cases, vote by vote: held-out votes with
+the largest improvement in the probability assigned to the vote the
+member actually cast, flexible spatial model versus the
+frozen-DW-NOMINATE model (identical held-out cells).}
+\label{tab:hardcase}
+{\small \input{tables/hardcase_votes.tex}}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.68\linewidth]{figures/member_gmp.pdf}
+\caption{Member-level fit on identical held-out votes. Each point is
+one member (at least 100 held-out votes), plotting held-out geometric
+mean probability under this paper's spatial model (vertical axis)
+against the frozen-DW-NOMINATE model (horizontal axis); blue denotes
+Democrats and red Republicans. Most members lie near the diagonal;
+the labeled members, for whom the classical model fits worst, are the
+literature's canonical hard cases.}
+\label{fig:membergmp}
+\end{figure}
+
+\subsection{Forecasting future votes}
+
+Table~\ref{tab:regime} reports the temporal-forecast comparison, in
+which every model predicts the final ten percent of each
+congress-chamber's rollcalls from the preceding ninety. The ensemble
+reaches \champForecastLL{} log loss (GMP \champForecastGMP;
+\champForecastAcc\% accuracy, \champContestedAcc\% on contested
+votes, APRE \champAPRE) on \forecastTestN{} strictly future votes.
+The comparison set is instructive at both ends. A constant-probability
+baseline scores \constantForecastLL{}; a member-by-question table of
+empirical voting rates scores \memberqForecastLL{}; and the
+2011--2016 text-based architectures, reimplemented with modern
+optimizers and embeddings where applicable, fail to improve on that
+table under proper scoring (Appendix Table~\ref{tab:lit})---the
+Gerrish--Blei-style ideal-point-topic model, scored as published,
+performs worse than the constant baseline (\gbRawForecastLL{}), and
+recovers only to \gbTcalForecastLL{} with temperature calibration.
+Those reimplementations do not exhaust what their era's methods might
+achieve under indefinite tuning, but the gap between them and the
+present pipeline is large. Because the ensemble's TF--IDF component
+includes CRS-curated subject metadata whose revision history cannot
+be verified (Appendix~\ref{app:audit}), we report throughout both the
+ensemble (\champForecastLL) and the fully leakage-clean single
+sentence-encoder tower (\incForecastLL); every qualitative conclusion
+in this paper holds under the conservative number. Paired
+rollcall-cluster bootstraps place the ensemble's margin over its own
+strongest component at $[\pairedDeltaOneLo, \pairedDeltaOneHi]$ log
+loss, so the gains are not artifacts of vote clustering.
+
+Three stratifications bound what the forecasting result does and does
+not mean. First, because bills often generate multiple rollcalls, a
+model could in principle recall a bill family's coalition from
+training rather than infer it from text. The opposite holds: on the
+\freshRC{} held-out rollcalls whose bills were never voted on in the
+training window, the text model's advantage over its no-text
+counterpart is \emph{larger} (log loss \freshLLchamp{} against
+\freshLLnotext) than on the \seenRC{} rollcalls with prior votes on
+the same bill (\seenLLchamp{} against \seenLLnotext)---the gains come
+from reading new bills, not remembering old ones. Second, the text
+gain is concentrated in the House (\houseLLchamp{} against
+\houseLLnotext{} without text) and much smaller in the Senate
+(\senateLLchamp{} against \senateLLnotext), a chamber difference that
+recurs in Section~\ref{sec:protest} and that we report as a boundary
+rather than smooth over. Third, the probabilities are usable as
+probabilities: expected calibration error is \eceChamp{} for the
+ensemble (Brier \brierChamp; reliability curves in
+Appendix Figure~\ref{fig:calibration}), against \eceNotext{}
+(\brierNotext) for the no-text counterpart.
+
+Because iterative development can overfit even a temporal holdout,
+the design includes a test that iteration cannot contaminate: a
+predecessor artifact was frozen and hash-pinned on June 12, 2026, and
+subsequently scored on the \prospectiveN{} member-vote decisions
+Congress cast after its June 9 data snapshot. It recorded
+\prospectiveVoneLL{} log loss (\prospectiveVoneAcc\% accuracy) on the
+post-snapshot sample and \postFreezeLL{} on the \postFreezeN{}
+decisions cast strictly after the freeze date itself, both consistent
+with its development-time performance (Table~\ref{tab:prospective}).
+The audit is preliminary---\prospectiveRC{} rollcalls is a small
+cluster count, and the interval in Table~\ref{tab:prospective} is
+correspondingly wide---but it accumulates mechanically as Congress
+votes, and the current ensemble is frozen on the same terms.
+
+\begin{table}[t]
+\centering
+\caption{Temporal-forecast comparison: test log loss and accuracy
+under identical evaluation. The right panel reports congress-out
+transfer, anticipating Section~\ref{sec:limits}.}
+\label{tab:regime}
+\input{tables/decomposition.tex}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Frozen, hash-pinned artifacts scored on votes cast after
+their June 9, 2026 data snapshot (freeze dates June 12 and July 3).
+The bootstrap 95\% interval for the v1 log loss is
+\prospLLlo--\prospLLhi.}
+\label{tab:prospective}
+\input{tables/prospective.tex}
+\end{table}
+
+\section{Text Detects Protest Voting in Advance}
+\label{sec:protest}
+
+Protest voting is the scaling literature's newest measurement
+problem: majority members voting against bills they arguably prefer
+\citep{fowler2026protest}. When such members appear to side with the
+opposite pole despite latent preferences near their party's, a
+one-dimensional model can misplace them---the ends-against-the-middle
+patterns that \citet{duckmayr2023ends} model with a generalized
+response function. Existing treatments in both traditions are
+retrospective, reinterpreting votes after they are cast. Our
+observable is the majority-party \emph{defection}---a broader
+category that includes sincere disagreement and constituency pressure
+alongside protest---and this section shows that defections are
+predictable before the vote, then examines how: which features of the
+text carry the signal, and where text alone falls short. The claim
+that the predicted defections include the protest episodes of
+substantive interest runs through the worked cases.
+
+\subsection{An episode}
+
+The logic has two parts. Member history identifies \emph{who} sits on
+a bill's losing flank, but history alone cannot indicate \emph{which
+bills} put the flank in revolt, because that depends on what the bill
+is---a leadership compromise, a bipartisan spending deal, a
+suspension-calendar package. That information is in the text.
+Figure~\ref{fig:protest} compares the two models on the American
+Relief Act of December 2024 (H.R.~10545), the continuing resolution
+that averted a government shutdown and passed 366--34 over a revolt
+of the Republican right flank; the vote sits deep in the holdout
+window, and neither model observed it. Without text, the architecture
+prices the vote as a routine majority-party bill: Democratic support
+is uncertain and the revolt is invisible. With the text, the model
+recognizes the character of the bill: Democratic probabilities move
+to near one, Republican probabilities decline with distance from the
+chamber center, and the five members the model considers the
+likeliest defectors in the entire chamber---Brecheen, Roy, Massie,
+Crane, and Biggs---all voted nay.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.98\linewidth]{figures/protest_detection.pdf}
+\caption{One majority-splitting vote (H.R.~10545, December 20, 2024),
+predicted by the same architecture without text (left panel) and with
+it (right panel). Each point is a member, positioned by first-dimension
+ideal point; dots denote members who voted yea (colored by party) and
+crosses the 34 members who voted nay. The majority party's modal vote
+was yea; ranking all members chamber-wide by predicted probability of
+voting nay, the text-reading model's five likeliest---all majority
+members, labeled at right---all voted nay.}
+\label{fig:protest}
+\end{figure}
+
+\subsection{How the model reads the bill}
+
+Where in the text does this information live? We answer with four
+diagnostics of increasing directness: what the encoder considers
+similar, what a linear probe recovers from the text alone, what
+breaks when parts of the text are redacted at scale, and what moves
+when specific bills' texts are counterfactually edited.
+
+One clarification first, because it disciplines the language of this
+section. The December 2024 continuing resolution appeared the day
+before its vote, so no summary existed: the model's entire text input
+was the vote question and the title---``On Motion to Suspend the
+Rules and Pass. American Relief Act, 2025.'' That is also all a
+contemporaneous observer could have read, and it proves sufficient
+for Figure~\ref{fig:protest}; but for such late-arriving bills
+``reading the bill'' means reading the title and the procedural
+posture. Most of the holdout is richer: 75\% of legislation-linked
+held-out rollcalls carry a genuine pre-vote summary, and the
+diagnostics below use both kinds of case.
+
+The first diagnostic asks what the encoder considers similar.
+Table~\ref{tab:neighbors} lists, for three held-out votes of the
+118th Congress, the nearest training-window rollcalls in
+sentence-embedding space, along with each neighbor's realized
+majority-party defection share. The December 2024 continuing
+resolution's neighborhood consists of earlier must-pass fiscal
+packages---the Tax Relief for American Families and Workers Act, the
+bipartisan tax agreement that drew a 22\% majority defection; a
+disaster tax-relief bill; and an earlier continuing-appropriations
+extension that drew a 42\% defection. The encoder, in other words,
+places the bill among precisely the earlier bills that provoked the
+same right-flank revolts, and the model's training on those
+neighbors' votes is what prices the defection risk. The BIOSECURE
+Act, a China-focused measure that passed with near-unanimous majority
+support, sits instead among low-defection national-security and
+regulatory bills. The second diagnostic removes members from the
+picture entirely: a ridge regression of each training rollcall's
+majority-defection share on its text embedding alone, evaluated on
+the holdout window, predicts realized defection shares at
+$r = \revoltProbeR$ across \revoltProbeN{} majority-side passage
+votes. Bill text by itself, with no member information, carries a
+measurable revolt signal.
+
+The table's middle panel is equally instructive because there text
+similarity fails. The Social Security Fairness Act drew a 34\%
+majority defection, yet its embedding neighbors are consensual
+benefit expansions that drew almost none: nothing in the summary's
+language marks the bill as contentious, because the conflict was
+procedural---the bill reached the floor by discharge petition rather
+than through the majority leadership's agenda. The full model
+nevertheless ranks the \ssfaDefectors{} Republican defectors on this
+vote better than its no-text twin (within-vote AUC \ssfaAUCtext{}
+against \ssfaAUCnotext), drawing on member history and institutional
+features rather than content.
+
+The third diagnostic redacts the text at scale.
+Table~\ref{tab:ablation} feeds the frozen champion's sentence-encoder
+tower systematically corrupted versions of the exact text template it
+was trained on, for all \ablRC{} legislation-linked holdout rollcalls,
+holding every non-text feature fixed; only the embedding input
+changes, so differences isolate the text component. Three results
+structure the table. Removing the vote question costs the most
+($\ablOrigLL \rightarrow \ablNoQLL$ log loss)---the procedural
+posture of a vote is the single most informative phrase the model
+reads, consistent with the discharge-petition case above. The placebo
+is the sharpest test: replacing a bill's description and summary with
+those of a \emph{different} bill in the same policy area and question
+bucket costs more ($\ablShuffLL$) than deleting the summary outright
+($\ablNoSumLL$)---topic-matched but wrong-bill text actively misleads
+the model, so the signal is bill-specific content, not policy-area
+membership. And masking proper nouns costs little
+($\ablNoPropLL$) while stripping digits costs nothing: the model is
+not recognizing names or dates. A policy-area decomposition
+(Appendix Table~\ref{tab:policygain}) locates the text gains where
+legislative language is most distinctive---government operations,
+international affairs, public lands---and near zero for taxation and
+commemorative business.
+
+\begin{table}[t]
+\centering
+\caption{Redaction ablations. Each row re-scores the identical
+member-vote cells through the frozen model, changing only the text
+supplied to its sentence encoder ($N = \ablRC$ legislation-linked
+holdout rollcalls). The defection AUC is the noisier statistic (507
+rollcalls) and is shown for completeness; log loss is the scoring
+rule.}
+\label{tab:ablation}
+{\small \input{tables/ablation_redaction.tex}}
+\end{table}
+
+The fourth diagnostic edits individual bills.
+Table~\ref{tab:counterfactual} performs counterfactual edits on two
+exemplars through the same frozen tower. For the title-only
+continuing resolution, replacing the title with generic language cuts
+the predicted majority defection from \cfAraOrig\% to \cfAraGeneric\%
+---the title's semantics carry real signal---while changing the
+question from suspension to ordinary passage \emph{raises} predicted
+defection to \cfAraPassage\%, the model having learned that
+leadership brings consensus business to the suspension calendar. For
+a summary-rich case---the 2006 Appalachian Regional Development
+amendments, a regional spending authorization whose 25\% right-flank
+revolt the model largely anticipated---substituting a same-area but
+different bill's summary halves the predicted revolt
+(\cfArdaOrig\% to \cfArdaSwap\%), while deleting interior sentences
+that mention spending programs, with the title retained, moves the
+prediction almost nowhere (\cfArdaCut\%). Together with the
+redaction table, the picture of \emph{how} the model reads is
+consistent and honest: it reads the way a hurried professional
+does---procedural posture first, then the title and the leading
+language of the summary, with the fine print contributing least.
+
+\begin{table}[t]
+\centering
+\caption{Counterfactual text edits on two exemplar holdout votes,
+scored by the frozen model with all non-text features held at their
+actual values. ``Top-5 correct'' is the number of the model's five
+likeliest majority defectors who in fact voted nay.}
+\label{tab:counterfactual}
+{\small \input{tables/counterfactual_edits.tex}}
+\end{table}
+
+The mechanism, then, is a division of labor: text locates a bill
+among its substantive precedents and sets the coalition's shape, the
+procedural posture signals how contested the leadership expects the
+vote to be, and member history supplies who sits where---with the
+institutional features carrying the cases, like the discharge
+petition, in which the path to the floor rather than the language
+predicts conflict.
+
+\begin{table}[t]
+\centering
+\caption{Nearest training-window rollcalls in sentence-embedding
+space for three held-out votes of the 118th Congress, with cosine
+similarity and each rollcall's realized majority-party defection
+share. Neighbors are restricted to votes that precede the exemplar
+and lie in the model's training window.}
+\label{tab:neighbors}
+{\small \input{tables/neighbors.tex}}
+\end{table}
+
+\subsection{The result generalizes}
+
+Define the detection task on the \protRC{} held-out rollcalls in
+which a member's party majority voted yea and at least three majority
+members defected (\protN{} defections in total): rank that party's
+members by predicted defection probability, compute the AUC within
+each rollcall, and average with equal weight across rollcalls. The
+text-reading ensemble attains \protAUCtext{}, against \protAUCnotext{}
+for its no-text counterpart---text resolves roughly a fifth of the
+remaining ranking errors. The result is robust in the directions a
+skeptic would probe. The fully leakage-clean single tower attains
+\protAUCclean, so the gain does not depend on the CRS-curated
+metadata discussed in Appendix~\ref{app:audit}. Dropping the
+three-defection filter and averaging over all \protRCall{}
+positive-defection rollcalls gives \protAUCtextAll{} against
+\protAUCnotextAll. Predicted defection \emph{shares} track realized
+shares across rollcalls (predicted--realized correlation
+\defShareRChamp{} against \defShareRNotext{} without text), though
+the highest-decile predictions overshoot---the model flags the right
+votes but overstates how large the largest revolts will be
+(Appendix Figure~\ref{fig:calibration}b). The one boundary is the
+chamber split: the text gain lives in the House
+(\protAUCtextHouse{} against \protAUCnotextHouse) and is absent in
+the Senate (\protAUCtextSenate{} against \protAUCnotextSenate{} over
+\protRCsenate{} rollcalls), where the negotiated floor agenda gives
+bill text little marginal purchase---a finding we report as a limit
+of the instrument, not a footnote.
+
+Two connections tie the result to the measurement literature, one of
+them chastened by its own check. The canonical hard cases of
+Figure~\ref{fig:membergmp} are also members whose defections the
+text model prices well---Paul and Amash sit at the
+\paulDefGainPct th and \amashDefGainPct th percentiles of the
+member-level text gain---but a member-level
+overlap test shows the two improvements are essentially uncorrelated
+across the full membership (Spearman $\rho = \overlapRho$ over
+\overlapN{} members): the scaling gains and the defection gains are
+related at the level of the phenomenon, not member by member, and we
+claim no more. And the ensemble's largest remaining
+residuals---defections
+inconsistent with even the full behavioral record---are released as a
+ranked ledger, a sampling frame enriched for pressure and defection
+episodes, for studying the votes that even text cannot explain.
+
+\section{Text Predicts Bill Cutpoints}
+\label{sec:cutpoints}
+
+The bill-location literature recovers proposal and status-quo
+positions from realized votes and cosponsorships
+\citep{peress2013estimating, richman2011parties}---necessarily after
+the fact. If bill content organizes coalitions, however, a bill's
+text should locate it before anyone votes. For every rollcall we take
+the realized cutpoint and direction from the spatial fits, hold out
+the final twenty percent of each congress-chamber's rollcalls, and
+predict both quantities from strictly pre-vote features.
+
+Figure~\ref{fig:cutpred} and Table~\ref{tab:cutpred} report the
+result. On the \cutTestN{} identified held-out rollcalls, text plus
+metadata predicts cutpoint locations with a mean absolute error of
+\cutComboMAE{} member-standard-deviations and a predicted-realized
+correlation of $r = \cutComboR$, against a no-feature baseline of
+\cutConstMAE{} (and $r = 0$); it classifies coalition direction
+correctly for \dirCombo\% of rollcalls, against a
+majority-direction baseline of \dirConst\%. The headline feature set
+here contains only the sentence-embedding representation of pre-vote
+text plus institutional metadata; the CRS-revisable subject fields
+discussed in Appendix~\ref{app:audit} enter only the separately
+reported TF--IDF row. Panel~(a) shows the predictions
+member-standard-deviation by member-standard-deviation: mass
+concentrates along the diagonal, with the labeled landmark bills
+indicating the scale's interpretation---bills realized to cut deep in
+the majority's territory are predicted there.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.98\linewidth]{figures/cutpoint_prediction.pdf}
+\caption{Predicting held-out rollcalls' cutpoints from pre-vote
+features. Panel (a): predicted (horizontal) against realized
+(vertical) cutpoints under the text-plus-metadata model, in
+member-standard-deviation units, with selected passage votes labeled;
+the gray line is the diagonal. Panel (b): mean absolute error of the
+cutpoint prediction by feature set; the dotted line is the no-feature
+baseline. Panel (c): share of rollcalls whose coalition direction is
+classified correctly; the dotted line is the majority-direction
+baseline.}
+\label{fig:cutpred}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{Predicting held-out rollcalls' cutpoints and directions from
+pre-vote features. The bottom panel decomposes the text into its
+components.}
+\label{tab:cutpred}
+\input{tables/cutpoint_pred.tex}
+\end{table}
+
+The decomposition in panels (b) and (c) assigns each input its role.
+Institutional metadata---question type, the bill sponsor's party,
+and, on amendment votes, the amender's party, with their
+interactions---is a strong baseline on its own: it locates cutpoints
+with $\mathrm{MAE} = \cutMetaMAE$ and supplies a default coalition
+side correct \dirMeta\% of the time, which is what one would expect
+in a chamber whose agenda is set by the majority party. Text improves
+every metric beyond that baseline, with the largest gains in
+direction (\dirCombo\%) and location correlation ($\cutMetaR
+\rightarrow \cutComboR$). The interpretation is the same division of
+labor as in Section~\ref{sec:protest}: the acting legislator's party
+indicates which side a bill is probably on, and the content indicates
+when that default is wrong, and by how much. Among the text
+components (Table~\ref{tab:cutpred}, bottom panel), the bill summary
+carries most of the directional information and the vote question
+most of the locational information.
+
+Figure~\ref{fig:dirterms} examines the directional signal at the term
+level, using an interpretable sparse model fit to final-passage
+summaries only. The language of program-building---\emph{establish},
+\emph{grants}, \emph{assistance}, \emph{workers},
+\emph{emergency}---is associated with liberal-yea coalitions, and the
+language of restraint and revision---\emph{rule}, \emph{regulation},
+\emph{permit}, \emph{budget}, \emph{injury}---with conservative-yea
+ones. These are predictive associations on a leader-curated agenda,
+not causal claims about language; but they indicate that the
+embedding models' directional signal rests on substantively sensible
+regularities rather than incidental correlates.
+
+Because the prediction target is itself an estimate, two
+stratifications gauge how much of the residual error belongs to the
+target rather than the prediction
+(Appendix Table~\ref{tab:cutstrata}). Realized cutpoints are pinned
+most precisely where rollcall discrimination is strong; on the
+high-discrimination half of the holdout, the mean absolute error
+falls to \cutHiDiscMAE{} member-standard-deviations and the
+predicted--realized correlation rises to $r = \cutHiDiscR$, so a
+substantial share of the headline error is noise in the target. By
+vote type, resolutions and procedural votes are located most
+accurately and cloture least; final-passage votes sit at
+$r = \cutPassageR$. Two caveats bound the
+exercise. The prediction target is the cutpoint of our own spatial
+fit---a realized-vote quantity with estimation error of its own---and
+we have not yet benchmarked the predictions against the
+proposal/status-quo estimates of \citet{peress2013estimating} or
+\citet{richman2011parties} on an overlapping sample; that comparison,
+which requires reimplementing those estimators, is the natural next
+test. An interactive forecaster operationalizes the section's result:
+a user pastes a hypothetical bill's text, selects a sponsoring party
+and chamber, and receives a predicted cutpoint and a member-by-member
+vote forecast, with a sponsor--coalition mismatch flag for inputs off
+the curated agenda (Appendix~\ref{app:dashboard}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=.62\linewidth]{figures/direction_terms.pdf}
+\caption{Bill-summary terms most associated with coalition direction,
+from a sparse linear model on final-passage votes. Positive
+coefficients (red) indicate language associated with conservative-yea
+coalitions; negative coefficients (blue), liberal-yea coalitions.}
+\label{fig:dirterms}
+\end{figure}
+
+\section{Two Boundaries}
+\label{sec:limits}
+
+Users of these methods should know where they stop, and both
+boundaries are measured rather than conjectured. The first concerns
+\emph{majority transitions}. At every House majority flip in the
+window---and at none of the placebo transitions---the
+procedural-vote component of member history stops transferring: the
+model's procedural log loss averages \flipProcLL{} across flips
+against \placeboProcLL{} across placebos, while final-passage
+transfer is flip-invariant (\flipPassLL{} against \placeboPassLL;
+Appendix Figure~\ref{fig:transitions}). Much of what any vote-based
+measure captures on the procedural agenda is institutional role
+rather than stable preference, and scores estimated in one majority
+configuration should be carried across configurations only with care
+\citep{bateman2017house}. The second concerns \emph{amendments}.
+Supplying amendments' purpose text makes prediction worse, not
+better, in pre-registered, placebo-controlled experiments
+(Appendix~\ref{app:ledger}); what moves amendment prediction is actor
+identity---the amender's party takes direction accuracy from
+approximately a coin flip to 77\%. Short purpose text adds nothing
+once bill identity and procedural context are modeled, a measured
+limit on what legislative language reveals, at least in the
+representations tested here.
+
+\section{Conclusion}
+
+Reading the bills makes Congress more measurable in three specific
+ways: a fit standard that improves on the classical measure exactly
+where it struggles; advance detection of the protest voting that
+scaling models could previously only reinterpret, with
+embedding-space evidence of how the text carries the signal; and
+prospective bill locations that the agenda literature could
+previously estimate only in retrospect. The benchmark, the frozen
+artifacts whose forecasting claims the future continues to audit, the
+interactive forecaster, and a complete ledger of what failed along
+the way are released together.
+
+\bibliographystyle{apsr}
+\bibliography{references}
+
+\appendix
+
+\section{Additional Tables}
+\label{app:tables}
+
+\begin{table}[h]
+\centering
+\caption{Completion regime (held-out vote completion; same-rollcall
+votes observable): the psychometric ladder.}
+\label{tab:regimeA}
+\input{tables/regimeA.tex}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{The 2011--2016 text-based architectures, reimplemented and
+evaluated under identical conditions.}
+\label{tab:lit}
+\input{tables/litrace.tex}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=.95\linewidth]{figures/transitions.pdf}
+\caption{Majority-transition study: cross-congress transfer at every
+House transition (red: majority flips), overall and by vote type.}
+\label{fig:transitions}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{The text gain (no-text minus model log loss, positive =
+text helps) by CRS policy area, passage-family holdout votes; areas
+with at least 25 held-out rollcalls. Policy area is an evaluation
+stratifier only, never a model input.}
+\label{tab:policygain}
+{\small \input{tables/policy_gain.tex}}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Cutpoint prediction (text + metadata) by vote type and by
+target precision. Realized cutpoints are estimated quantities;
+strongly discriminating rollcalls pin them most precisely.}
+\label{tab:cutstrata}
+{\small \input{tables/cutpoint_strata.tex}}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=.95\linewidth]{figures/calibration.pdf}
+\caption{Calibration on the temporal-forecast holdout. Panel (a):
+member-vote reliability curves (16 equal-count bins). Panel (b):
+predicted against realized majority-defection shares by decile of the
+prediction, majority-yea passage-family rollcalls with at least 50
+majority members.}
+\label{fig:calibration}
+\end{figure}
+
+\section{Measurement Provenance}
+\label{app:provenance}
+
+Which estimator produces each quantity:
+the ensemble produces vote forecasts (pre-vote), the protest-detection
+scores (pre-vote), and the out-of-character residual ledger
+(in-sample, labeled as such); per chamber-congress spatial fits
+produce positions, cutpoints, and directions (from realized votes);
+ridge and logistic models on pre-vote features produce the cutpoint
+\emph{predictions} of Section~\ref{sec:cutpoints}. An identifiability
+remark bounds the enterprise: if two member-rollcall states are
+observationally equivalent given the full available information
+set---inducing the same joint distribution of votes and observed
+covariates---no measure computed from that information can
+distinguish them. The
+repository's synthetic suite demonstrates the constructive direction:
+planted structures are recovered exactly by the models whose held-out
+scores improve.
+
+\section{Feature Timing and Text Coverage}
+\label{app:audit}
+
+Every input and its timestamp rule: vote question and description
+(fixed at the vote); bill title and sponsor (introduction); bill
+summaries (only versions dated strictly before the vote); amendment
+purpose and amender party (filed at submission; joined through
+recorded-vote references with session-offset correction);
+member-by-question rates (training window only); majority status
+(member composition); early stopping and calibration (final 5\% of
+training rollcalls, inside train). CRS-revisable policy metadata is
+excluded from the leakage-clean text; the ensemble's TF--IDF
+component includes it, so the fully conservative headline is the
+single MiniLM tower's \incForecastLL{} rather than the ensemble's
+\champForecastLL. Text coverage: the vote question is universal; 95\%
+of legislation-linked rollcalls have a pre-vote summary or title;
+\amdtFilledNoDesc{} of \amdtNoDesc{} text-starved amendment rollcalls
+gain amendment-side information via the records join.
+
+\section{Model Specification}
+\label{app:spec}
+
+The champion is a logistic blend (weights 0.57/0.12/0.42, fit on the
+temporal development slice) of three two-tower models: member
+embedding $x_i \in \mathbb{R}^{16}$ and intercept; rollcall
+parameters amortized from features by a two-layer MLP (width 128);
+sponsor-alignment and member-by-question logit offsets; temperature
+calibration on the development slice. Towers differ in text features:
+MiniLM (all-MiniLM-L6-v2, frozen, 384d, 1,500-character template);
+plus TF--IDF/SVD of title-subject metadata; and Qwen3-Embedding-0.6B
+(1,024d, 6,000 characters). AdamW (lr .02, wd $10^{-4}$), batch
+$2^{17}$, early stopping on the temporal slice. The blend weights are
+unconstrained logistic-stacking coefficients (they need not sum to
+one). The no-text counterpart deletes all text blocks and is
+independently trained, early-stopped, and temperature-calibrated
+under the identical protocol; nothing is inherited from the text
+models. One
+pipeline command regenerates every exhibit from raw Voteview and
+BILLSTATUS files; the headline table costs under two GPU-hours on a
+laptop-class accelerator.
+
+\section{The Experiment Ledger}
+\label{app:ledger}
+
+Every development experiment was pre-registered with hypothesis,
+knowability argument, and falsification test before its first run;
+selection used validation only; the final three-model comparison
+observed test sets once. Recorded negatives, with mechanisms: encoder
+scale (a $16\times$ text budget does not help and worsens long
+bills); amendment purpose text (three variants and a placebo control;
+Section~\ref{sec:limits}); recency-weighted member rates; within-bill
+context features; per-bucket calibration; and, recorded within the
+E4b entry, regime inheritance (parameters fit on the temporal
+development slice transfer to temporal evaluation and degrade on
+interleaved evaluation).
+
+\begin{table}[h]
+\centering
+\caption{Ledger audit trail (full record with timestamps in the
+repository).}
+\label{tab:ledger}
+{\small
+\begin{tabular}{llll}
+\toprule
+ID & Hypothesis & Falsification test & Outcome \\
+\midrule
+M-A & bigger encoder helps long bills & long-bill val loss falls & negative \\
+E1 & within-bill context helps & beats shuffled-bill placebo & negative \\
+E1b & stacked context corrector & permuted-bill weights $\to 0$ & null \\
+E2 & recency-weighted rates help & $\tau\to\infty$ recovers flat & negative \\
+E3 & per-bucket calibration helps & val loss below global cal. & negative \\
+E4/E4b & tower blends help & dev-weight collapse if redundant & positive \\
+E5a--c & amendment text helps & beats placebo file rebuild & negative \\
+E4b(r) & dev-slice params inherit regime & interleaved val degrades & confirmed \\
+S5 & blend beats champion & one-shot test LL below champion & positive \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\section{The Interactive Forecaster}
+\label{app:dashboard}
+
+A single-tower approximation of the frozen champion (MiniLM component
+only; near-threshold forecasts should be read accordingly). Pasted
+text enters the training template and encoder; a synthetic bill
+record carries the user's sponsoring party; the cutpoint comes from a
+fractional-response logistic fit of predicted probabilities on
+current-member positions, with fitted mean $q_i =
+\sigma(\alpha + \beta x_i)$; the reported cutpoint $x^* =
+-\alpha/\beta$ is the 0.5 crossing of the fitted curve, displayed
+only when the slope is meaningful and the crossing lies within the
+chamber. Forecasts whose predicted coalition conflicts with the
+bill's own sponsorship carry a sponsor--coalition mismatch flag: such
+inputs lie off the curated floor agenda on which the model was
+trained, and its extrapolations there are unvalidated.
+
+\end{document}
