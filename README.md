@@ -1,4 +1,9 @@
-# rollcalls
+# Reading the Bills
+
+Text-based measurement and forecasting of congressional roll-call voting:
+paper drafts (`Draft/`), an open benchmark and model registry (`Code/`),
+and a live forecaster at https://bill-forecaster.vercel.app that predicts
+how every member of the current Congress would vote on a pasted bill.
 
 An auto-researcher benchmark for predicting congressional roll-call votes.
 The goal: build progressively better predictors of how members of Congress
