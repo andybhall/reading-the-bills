@@ -11,6 +11,30 @@ vote, then extract interpretable member attributes (ideology, party loyalty,
 issue positions, ...) from what the predictors learn.
 Full project definition: `Notes/vision.md`. Decisions: `Notes/decisions.md`.
 
+## Replication status (verified from a clean clone, 2026-07-07)
+
+A fresh `git clone` of this repository, with no other data, reproduces
+the exhibit layer end-to-end:
+
+- `python3 Code/make_tables.py` regenerates every table and the
+  `numbers.tex` macro file **byte-identical** to the tracked versions
+  (the "no hand-transcribed statistics" invariant, verified by diff);
+- `python3 Code/make_figures.py` regenerates all 15 figures;
+- all three documents (`Draft/short_paper.tex`, `Draft/paper.tex`,
+  `Draft/technical_memo.tex`) compile with zero errors;
+- the web-app predictor (`webapp_vercel/`) produces bit-identical
+  member-level forecasts to the deployed app at
+  https://bill-forecaster.vercel.app.
+
+Not re-run from the clone (regenerable, documented below): the raw
+data download, the panel/embedding builds, and model training
+(~2 GPU-hours for the headline table). The frozen model pickle is not
+distributed; its SHA-256 lives in
+`Modified Data/results/frozen/prospective_model_v2_meta.json`.
+
+Licensing: MIT (code) and CC BY 4.0 (documents, derived data) — see
+`LICENSE.md`.
+
 ## Reproduce
 
 ```bash
