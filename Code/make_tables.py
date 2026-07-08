@@ -277,6 +277,78 @@ def decomposition(lb):
             rows, "lcccc")
 
 
+def method_comparison(lb):
+    """One clean table, one row per named existing method, columns = the
+    Poole-Rosenthal fit statistics (correct classification, APRE, GMP) in
+    the two evaluation settings. Requested for the technical memo: 'how
+    much better is the new model than DW-NOMINATE, CJR, Gerrish-Blei,
+    Kraft' answerable from a single exhibit. Empty cells use \\textemdash
+    (structurally inapplicable; explained in the table notes)."""
+    import math
+
+    def cells(model, split):
+        ll = get(lb, model, split, "log_loss")
+        if pd.isna(ll):
+            return ["\\textemdash"] * 3
+        acc = get(lb, model, split, "accuracy")
+        ap = get(lb, model, split, "apre")
+        return [f"{100*acc:.1f}", f"{ap:.2f}", f"{math.exp(-ll):.3f}"]
+
+    def row(label, comp_model, fcst_model):
+        c = cells(comp_model, "regimeA_seed42") if comp_model else \
+            ["\\textemdash"] * 3
+        f = cells(fcst_model, "forecast108_119") if fcst_model else \
+            ["\\textemdash"] * 3
+        return " & ".join([label] + c + f)
+
+    groups = [
+        ("Classical spatial models", [
+            ("1D ideal point (Clinton--Jackman--Rivers)",
+             "ideal_point_1d", None),
+            ("2D ideal point", "ideal_point_2d", None),
+            ("DW-NOMINATE, frozen positions", "nominate_logit", None),
+            ("8D ideal point + member intercepts (this paper)",
+             "ideal_point_8d", None),
+        ]),
+        ("Voting-history baselines, no text", [
+            ("Constant yea rate", "constant_rate", "constant_rate"),
+            ("Member vote rates", "member_rate", "member_rate"),
+            ("Member $\\times$ question-type rates", None,
+             "member_question_rate"),
+            ("DW-NOMINATE $\\times$ metadata logit", None,
+             "nominate_context_logit"),
+        ]),
+        ("2011--2016 text models, reimplemented", [
+            ("Gerrish--Blei topic regression, as published", None,
+             "gb_spatial_tfidf"),
+            ("\\quad + temperature calibration", None,
+             "gb_spatial_tfidf_tcal"),
+            ("\\quad + modern sentence embeddings", None,
+             "gb_spatial_emb2_tcal"),
+            ("Kraft et al.\\ bilinear embeddings", None,
+             "kraft_bilinear_16d"),
+        ]),
+        ("This paper: amortized two-tower models", [
+            ("Two-tower, text deleted", None, "notext_mq_16d_tcal"),
+            ("Two-tower, MiniLM encoder (leakage-clean)", None,
+             "emb2_mlp_mq_16d_tcal"),
+            ("Three-tower ensemble", None,
+             "blend3_mlp_tfidf_emb3_tcal"),
+        ]),
+    ]
+    rows = []
+    for gname, members in groups:
+        rows.append(f"\\multicolumn{{7}}{{l}}{{\\emph{{{gname}}}}}")
+        for label, cm, fm in members:
+            rows.append("\\quad " + row(label, cm, fm))
+    tabular(OUT / "method_comparison.tex",
+            " & \\multicolumn{3}{c}{Vote completion} & "
+            "\\multicolumn{3}{c}{Future-vote forecast} \\\\\n"
+            "\\cmidrule(lr){2-4}\\cmidrule(lr){5-7}\n"
+            "Method & CC (\\%) & APRE & GMP & CC (\\%) & APRE & GMP",
+            rows, "lcccccc")
+
+
 def prospective():
     rows = []
     for tag, f in (("v1 (emb2-MLP tower)", "prospective_report.json"),
@@ -568,6 +640,7 @@ def main():
     cutpoint_pred()
     decomposition(lb)
     prospective()
+    method_comparison(lb)
     numbers(lb)
     # completeness check: no placeholder cells in any table the draft inputs
     missing = []

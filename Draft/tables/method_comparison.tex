@@ -1,0 +1,27 @@
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{3}{c}{Vote completion} & \multicolumn{3}{c}{Future-vote forecast} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Method & CC (\%) & APRE & GMP & CC (\%) & APRE & GMP \\
+\midrule
+\multicolumn{7}{l}{\emph{Classical spatial models}} \\
+\quad 1D ideal point (Clinton--Jackman--Rivers) & 91.6 & 0.69 & 0.825 & \textemdash & \textemdash & \textemdash \\
+\quad 2D ideal point & 93.3 & 0.76 & 0.851 & \textemdash & \textemdash & \textemdash \\
+\quad DW-NOMINATE, frozen positions & 93.3 & 0.76 & 0.849 & \textemdash & \textemdash & \textemdash \\
+\quad 8D ideal point + member intercepts (this paper) & 93.8 & 0.77 & 0.858 & \textemdash & \textemdash & \textemdash \\
+\multicolumn{7}{l}{\emph{Voting-history baselines, no text}} \\
+\quad Constant yea rate & 63.7 & -0.32 & 0.519 & 70.9 & -0.11 & 0.539 \\
+\quad Member vote rates & 64.9 & -0.28 & 0.533 & 69.4 & -0.16 & 0.556 \\
+\quad Member $\times$ question-type rates & \textemdash & \textemdash & \textemdash & 76.0 & 0.09 & 0.632 \\
+\quad DW-NOMINATE $\times$ metadata logit & \textemdash & \textemdash & \textemdash & 72.4 & -0.05 & 0.587 \\
+\multicolumn{7}{l}{\emph{2011--2016 text models, reimplemented}} \\
+\quad Gerrish--Blei topic regression, as published & \textemdash & \textemdash & \textemdash & 72.4 & -0.05 & 0.448 \\
+\quad \quad + temperature calibration & \textemdash & \textemdash & \textemdash & 72.5 & -0.04 & 0.568 \\
+\quad \quad + modern sentence embeddings & \textemdash & \textemdash & \textemdash & 71.3 & -0.09 & 0.573 \\
+\quad Kraft et al.\ bilinear embeddings & \textemdash & \textemdash & \textemdash & 76.0 & 0.09 & 0.609 \\
+\multicolumn{7}{l}{\emph{This paper: amortized two-tower models}} \\
+\quad Two-tower, text deleted & \textemdash & \textemdash & \textemdash & 76.5 & 0.11 & 0.645 \\
+\quad Two-tower, MiniLM encoder (leakage-clean) & \textemdash & \textemdash & \textemdash & 85.2 & 0.44 & 0.706 \\
+\quad Three-tower ensemble & \textemdash & \textemdash & \textemdash & 86.2 & 0.48 & 0.723 \\
+\bottomrule
+\end{tabular}
