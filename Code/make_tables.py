@@ -328,11 +328,13 @@ def method_comparison(lb):
             ("Kraft et al.\\ bilinear embeddings", None,
              "kraft_bilinear_16d"),
         ]),
+        # completion cells use the regime-matched random-dev-slice
+        # variants (ledger E8); forecast cells the registered tcal models
         ("This paper's text model (amortized two-tower)", [
-            ("\\quad with the text deleted (counterfactual)", None,
-             "notext_mq_16d_tcal"),
-            ("\\quad MiniLM encoder (leakage-clean)", None,
-             "emb2_mlp_mq_16d_tcal"),
+            ("\\quad with the text deleted (counterfactual)",
+             "notext_mq_16d_rcal", "notext_mq_16d_tcal"),
+            ("\\quad MiniLM encoder (leakage-clean)",
+             "emb2_mlp_mq_16d_rcal", "emb2_mlp_mq_16d_tcal"),
             ("\\quad ensemble of three encoders (champion)", None,
              "blend3_mlp_tfidf_emb3_tcal"),
         ]),

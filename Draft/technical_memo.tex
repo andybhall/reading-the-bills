@@ -441,6 +441,17 @@ MiniLM tower; 86.2 / 0.48 / 0.723 for the three-encoder ensemble). The
 same architecture with its text deleted (76.5 / 0.11 / 0.645) shows how
 much of that gain is the text: most of it.
 
+The text model's own completion cells (ledger E8) quantify the other
+side of the trade. Scored on the same held-out cells as the spatial
+models, the MiniLM tower reaches 80.7 / 0.30 / 0.691---far above its
+no-text twin (70.4 / $-$0.08 / 0.587), so text does substantial work
+even here, but well below DW-NOMINATE's 93.3 / 0.76 / 0.849. That gap
+is not a defect to explain away; it prices what free rollcall
+parameters buy when the held-out rollcall's own vote tallies are
+observable, and what amortization gives up in exchange for the entire
+forecast panel, which no free-parameter model can enter. One model,
+both settings, both numbers printed.
+
 \begin{table}[tbp]
 \centering
 \begin{threeparttable}
@@ -451,11 +462,17 @@ rollcall's majority baseline; GMP = geometric mean probability assigned
 to cast votes. \emph{Vote completion}: random held-out member--vote
 cells, same-rollcall votes observable (101st--119th Congresses).
 \emph{Future-vote forecast}: final 10\% of each congress-chamber's
-rollcalls by date (108th--119th). Empty cells are structural: spatial
-models with free rollcall parameters cannot score never-voted
-rollcalls, and forecast-purpose models are not run in the completion
-setting. All rows are generated from the same benchmark leaderboard;
-identical evaluation cells within each column.}
+rollcalls by date (108th--119th). Empty forecast cells are structural:
+spatial models with free rollcall parameters cannot score never-voted
+rollcalls. The text model's completion cells use regime-matched
+variants (random-cell development slice; pre-registered as ledger
+entry E8); note the informational asymmetry in that panel favors the
+classical rows, whose rollcall parameters are estimated from the
+held-out rollcall's own observed votes, while the text model never
+sees them. The ensemble's completion cell is empty because its
+stacking slice is temporal by construction. All rows are generated
+from the same benchmark leaderboard; identical evaluation cells within
+each column.}
 \label{tab:methods}
 {\small \input{tables/method_comparison.tex}}
 \end{threeparttable}

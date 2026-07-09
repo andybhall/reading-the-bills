@@ -273,3 +273,47 @@ question cell; the noisier offset (the single most-trusted z column)
 costs far more than drift-tracking gains. Flat member histories beat
 recency-weighted ones at this granularity. Not iterating on tau — that
 would be metric shopping; one a-priori value was the design.
+
+## E8 — text model in the completion regime (2026-07-08, pre-registered)
+
+**Hypothesis.** The amortized two-tower text model, which never observes
+a held-out rollcall's own vote tallies, can approach the completion-fit
+of spatial models whose per-rollcall parameters are estimated from
+those very tallies. Filling the completion cells for the text-model
+rows of the method-comparison table (Andy's request: one model, both
+settings).
+
+**Knowability.** All inputs (text, metadata, member history from train
+cells) are available in the completion regime by construction.
+
+**Design.** Regime-matched configs per E4b(r): random-cell internal dev
+slice + calibration (NOT the temporal slice, which is mismatched for
+interleaved evaluation). Two NEW registry entries, declared now, run
+once each, one process per model, test set scored in the same run:
+  - emb2_mlp_mq_16d_rcal  (MiniLM-MLP tower, random-ES, calibrated)
+  - notext_mq_16d_rcal    (same architecture, text deleted)
+The three-encoder ensemble is NOT run: its stacking slice is temporal
+by construction; its completion cell stays empty with a caption note.
+
+**Falsification / reporting rule.** Whatever the numbers are, they go
+in the table: if the text model's GMP falls below nominate_logit
+(0.849), the table shows that free per-rollcall parameters remain
+necessary for completion-level fit. No iteration, no second run.
+
+**Caveat recorded.** regimeA test was previously observed once (the
+spatial-ladder adjudication). This is a second, single-shot,
+pre-declared observation — a reusable-holdout cost we accept and
+disclose, not iterate on. Text coverage begins with the 108th
+Congress; earlier cells are predicted from metadata + member history
+(identical evaluation cells to the spatial rows regardless).
+
+**E8 OUTCOME (recorded 2026-07-08, single shot as registered).**
+emb2_mlp_mq_16d_rcal on regimeA test: LL 0.3695 (GMP 0.691), CC 80.7,
+APRE 0.30. notext_mq_16d_rcal: LL 0.533 (GMP 0.587), CC 70.4, APRE
+−0.08. Falsification condition met: the text model's completion GMP
+(0.691) is well below nominate_logit (0.849) — free per-rollcall
+parameters remain necessary for completion-level fit, as the table now
+shows. Within the completion setting, text still does large work
+relative to no-text (+10.3 CC points, +0.104 GMP). Interpretation:
+amortization trades completion fit for forecasting ability; the two
+panels of the method table now quantify both sides of that trade.

@@ -724,6 +724,20 @@ REGISTRY["emb_placebo_mlp_mq_16d_tcal"] = lambda: TextTower(
 # (E5 family regressions were insensitive to content; diagnosed 2026-07-03)
 
 
+# E8 (2026-07-08): completion-regime variants — identical architecture,
+# random-cell internal dev slice + calibration (regime-matched for
+# interleaved/completion evaluation per E4b(r); the temporal slice is
+# for forecast evaluation). Pre-registered in the experiment ledger.
+REGISTRY["emb2_mlp_mq_16d_rcal"] = lambda: TextTower(
+    k=16, use_text=False, use_emb=True, mq_offset=True, calibrate=True,
+    mlp_head=True, es_mode="random",
+    name="emb2_mlp_mq_16d_rcal")
+REGISTRY["notext_mq_16d_rcal"] = lambda: TextTower(
+    k=16, use_text=False, use_emb=False, mq_offset=True, calibrate=True,
+    mlp_head=True, es_mode="random",
+    name="notext_mq_16d_rcal")
+
+
 REGISTRY["notext_mq_16d_tcal"] = lambda: TextTower(
     k=16, use_text=False, use_emb=False, mq_offset=True, calibrate=True,
     mlp_head=True, es_mode="temporal",
