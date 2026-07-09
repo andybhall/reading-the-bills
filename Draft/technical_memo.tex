@@ -413,7 +413,15 @@ different, which is why cells are empty rather than the table forcing a
 false comparison: classical spatial models estimate each rollcall's
 parameters from its own votes and therefore cannot score a rollcall no
 one has voted on, and the completion column is left empty for
-forecast-purpose models.
+forecast-purpose models. This paper therefore appears twice,
+deliberately: its \emph{spatial benchmark} (the 8-D model with member
+intercepts---still equation~\ref{eq:irt}, free rollcall parameters, no
+text) competes in the completion block against DW-NOMINATE and
+Clinton--Jackman--Rivers, while its \emph{text model} (the amortized
+two-tower architecture of equation~\ref{eq:tower}) competes in the
+forecast block. They are different models answering different
+questions: how much better can vote-only scaling fit, and what does
+reading the bill add.
 
 Reading down the table: in the completion setting, frozen DW-NOMINATE
 (CC 93.3, APRE 0.76, GMP 0.849) and the two-dimensional
@@ -427,10 +435,10 @@ that bar: the Gerrish--Blei-style model as published (72.4 / $-$0.05 /
 0.448, an APRE below zero meaning it classifies worse than calling
 every rollcall for its majority), 0.568 GMP with calibration added, and
 the Kraft-style bilinear exactly ties the count table on CC and APRE
-(76.0 / 0.09) with a worse GMP. This paper's leakage-clean tower and
-ensemble clear the bar by roughly nine and ten points of CC and
-quadruple the APRE (85.2 / 0.44 / 0.706 and 86.2 / 0.48 / 0.723). The
-two-tower model with its text deleted (76.5 / 0.11 / 0.645) shows how
+(76.0 / 0.09) with a worse GMP. This paper's text model clears the bar by roughly nine and ten points of CC and
+quadruple the APRE (85.2 / 0.44 / 0.706 for the leakage-clean
+MiniLM tower; 86.2 / 0.48 / 0.723 for the three-encoder ensemble). The
+same architecture with its text deleted (76.5 / 0.11 / 0.645) shows how
 much of that gain is the text: most of it.
 
 \begin{table}[tbp]

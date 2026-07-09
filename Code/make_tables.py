@@ -302,12 +302,12 @@ def method_comparison(lb):
         return " & ".join([label] + c + f)
 
     groups = [
-        ("Classical spatial models", [
+        ("Classical spatial models (free rollcall parameters, no text)", [
             ("1D ideal point (Clinton--Jackman--Rivers)",
              "ideal_point_1d", None),
             ("2D ideal point", "ideal_point_2d", None),
             ("DW-NOMINATE, frozen positions", "nominate_logit", None),
-            ("8D ideal point + member intercepts (this paper)",
+            ("This paper's spatial benchmark: 8D + member intercepts",
              "ideal_point_8d", None),
         ]),
         ("Voting-history baselines, no text", [
@@ -328,11 +328,12 @@ def method_comparison(lb):
             ("Kraft et al.\\ bilinear embeddings", None,
              "kraft_bilinear_16d"),
         ]),
-        ("This paper: amortized two-tower models", [
-            ("Two-tower, text deleted", None, "notext_mq_16d_tcal"),
-            ("Two-tower, MiniLM encoder (leakage-clean)", None,
+        ("This paper's text model (amortized two-tower)", [
+            ("\\quad with the text deleted (counterfactual)", None,
+             "notext_mq_16d_tcal"),
+            ("\\quad MiniLM encoder (leakage-clean)", None,
              "emb2_mlp_mq_16d_tcal"),
-            ("Three-tower ensemble", None,
+            ("\\quad ensemble of three encoders (champion)", None,
              "blend3_mlp_tfidf_emb3_tcal"),
         ]),
     ]
